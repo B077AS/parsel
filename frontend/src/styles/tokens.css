@@ -1,0 +1,46 @@
+/* Design tokens. Flat surfaces, hairline borders, one accent. Every colour in the app comes from here.
+   --accent and --on-accent are overridden at runtime by theme.ts (the accent differs between light and dark). */
+:root {
+  --font: 'Twemoji Country Flags', system-ui, 'Segoe UI', 'Noto Sans', sans-serif;
+  --radius: 6px;
+  /* The left column: the mail sidebar, the Settings menu and the account switcher above them are all this wide. */
+  --sidebar-width: 256px;
+  --radius-lg: 10px;
+
+  --bg: #fcfcfb; /* list, reader */
+  --bg-side: #f3f3f1; /* sidebar, toolbar, native title bar */
+  --bg-raised: #ffffff; /* inputs, popovers */
+  --bg-hover: #ebebe8;
+  --border: #e2e2de;
+  --border-strong: #cfcfca;
+  --text: #1c1c1a;
+  --text-2: #55554f;
+  --text-3: #86867f;
+  --danger: #c4332b;
+  --ok: #2f7d3f;
+  --star: #d29a0c;
+
+  --accent: #2a62d9;
+  --on-accent: #ffffff;
+  --accent-tint: color-mix(in srgb, var(--accent) 11%, var(--bg));
+  --accent-tint-strong: color-mix(in srgb, var(--accent) 18%, var(--bg));
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #1a1a19;
+  --bg-side: #141413;
+  --bg-raised: #222221;
+  --bg-hover: #2a2a28;
+  --border: #2d2d2b;
+  --border-strong: #42423f;
+  --text: #ececea;
+  --text-2: #b0b0aa;
+  --text-3: #7d7d77;
+  --danger: #f0786f;
+  --ok: #6cc17e;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}

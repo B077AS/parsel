@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Parsel
+Comment=A clean desktop webmail client
+Exec=parsel
+Icon=com.parsel.app
+Terminal=false
+Categories=Network;Email;
+StartupWMClass=com.parsel.app
