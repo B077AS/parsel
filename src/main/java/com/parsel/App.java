@@ -68,6 +68,9 @@ public final class App {
         boolean smoke = Boolean.getBoolean("parsel.smoke");
         boolean demo = Boolean.getBoolean("parsel.demo") || smoke;
 
+        // Before any window: lets the taskbar show the window's accent icon instead of the installer shortcut's (see WindowsTaskbar).
+        WindowsTaskbar.setAppId(APP_ID);
+
         // GTK's file chooser prints harmless "GFileInfo created without standard::size" warnings on Linux; hide just those.
         AppOptions appOptions = AppOptions.of(APP_ID).withQuietNativeLogs(true);
         // -Dparsel.data=<folder> keeps everything (settings, mail, vault, web view data) apart from the real profile: for tests and trying things out.
@@ -355,16 +358,10 @@ public final class App {
 
     private static void registerTheme(Rpc rpc, WebWindow window, SettingsStore settings, TrayController tray) {
         int[][] lastIconColours = {null};
-        byte[][] lastIcon = {null};
         rpc
                 // The page has its content on screen: now the window can appear (maximized) without a blank flash.
                 .on("window.ready", params -> {
                     window.show();
-                    // The taskbar button only exists once the window is shown, and a packaged Parsel.exe can have it start out with the
-                    // file's own (blue) icon: put the accent icon on the window again now that it is visible.
-                    if (lastIcon[0] != null) {
-                        window.setIcon(lastIcon[0]);
-                    }
                     return Map.of("ok", true);
                 })
                 // The page cannot restyle the operating system's title bar, but it can ask Java to.
@@ -379,7 +376,6 @@ public final class App {
                     if (!java.util.Arrays.equals(colours, lastIconColours[0])) {
                         lastIconColours[0] = colours;
                         byte[] ico = AppIcon.ico(colours[0], colours[1]);
-                        lastIcon[0] = ico;
                         window.setIcon(ico);
                         tray.setIcon(ico);
                     }
