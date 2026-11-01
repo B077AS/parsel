@@ -9,7 +9,9 @@
 //         linux-deb           Parsel-<v>-linux-amd64.deb          (on Linux, needs fakeroot and dpkg; build it on the oldest Ubuntu you want it to
 //                                                                  install on: the package names its dependencies as that system calls them)
 //         linux-tarball       Parsel-<v>-linux-x64.tar.gz         (on Linux; unpack and run Parsel/bin/Parsel)
-//         jars                Parsel-<v>-jars.zip                 (any system with Java 25: java -jar parsel-<v>.jar)
+//         linux-appimage      Parsel-<v>-linux-x86_64.AppImage    (on Linux, needs appimagetool on the PATH; NOT the recommended Linux download: it still needs the system's
+//                                                                  GTK, WebKitGTK and libsecret, so it gains little over the .deb and the .tar.gz)
+//         jars                Parsel-<v>.jar                      (one jar with everything in it; any system with Java 25: java -jar Parsel-<v>.jar)
 //
 // Every installer carries its own Java runtime (made with jlink from the modules listed below), so users need no Java.
 // Needs JDK 25 on the PATH (jpackage, jlink) and Node 20+.
@@ -63,7 +65,7 @@ function pomVersion() {
 }
 
 const options = parseArgs(process.argv.slice(2));
-if (!options.kind) fail('say what to build: windows-installer, windows-portable, linux-deb, linux-tarball or jars');
+if (!options.kind) fail('say what to build: windows-installer, windows-portable, linux-deb, linux-tarball, linux-appimage or jars');
 const version = (options.version ?? pomVersion()).replace(/^v/, '');
 // jpackage wants 1, 1.2 or 1.2.3 (digits only); a tag like 1.2.0-beta1 keeps its full name on the files and 1.2.0 inside.
 const appVersion = (version.match(/^\d+(\.\d+){0,2}/) ?? [])[0];
@@ -96,7 +98,7 @@ function jpackage(extra) {
     '--name', 'Parsel',
     '--app-version', appVersion,
     '--vendor', 'Parsel',
-    '--description', 'A clean desktop webmail client',
+    '--description', 'Parsel',
     '--java-options', '--enable-native-access=ALL-UNNAMED',
     '--add-modules', MODULES,
     '--dest', scratch,
@@ -188,13 +190,28 @@ switch (options.kind) {
     console.log(`\nbuilt ${file} (${(fs.statSync(file).size / 1048576).toFixed(1)} MB)`);
     break;
   }
+  case 'linux-appimage': {
+    if (process.platform !== 'linux') fail('the AppImage is built on Linux');
+    // The same app folder as the tarball, wrapped in an AppDir: AppRun starts it, and the desktop file and icon sit at the top.
+    jpackage(['--type', 'app-image', '--icon', path.join(root, 'packaging', 'linux', 'icons', '256.png')]);
+    const appDir = path.join(scratch, 'Parsel.AppDir');
+    fs.mkdirSync(appDir);
+    fs.renameSync(path.join(scratch, 'Parsel'), path.join(appDir, 'Parsel'));
+    fs.writeFileSync(path.join(appDir, 'AppRun'), '#!/bin/sh\nHERE="$(dirname "$(readlink -f "$0")")"\nexec "$HERE/Parsel/bin/Parsel" "$@"\n', { mode: 0o755 });
+    fs.writeFileSync(path.join(appDir, 'com.parsel.app.desktop'),
+      fs.readFileSync(path.join(root, 'packaging', 'linux', 'com.parsel.app.desktop'), 'utf8').replace('Exec=parsel', 'Exec=AppRun'));
+    fs.copyFileSync(path.join(root, 'packaging', 'linux', 'icons', '256.png'), path.join(appDir, 'com.parsel.app.png'));
+    const file = path.join(options.out, `Parsel-${version}-linux-x86_64.AppImage`);
+    fs.rmSync(file, { force: true });
+    run('appimagetool', [appDir, file], { env: { ...process.env, ARCH: 'x86_64' } });
+    console.log(`\nbuilt ${file} (${(fs.statSync(file).size / 1048576).toFixed(1)} MB)`);
+    break;
+  }
   case 'jars': {
-    // The app jar names every other jar in its manifest, and its manifest allows native access, so `java -jar` is all it takes.
-    const folder = path.join(scratch, 'parsel');
-    fs.mkdirSync(folder);
-    for (const f of fs.readdirSync(packageDir)) fs.copyFileSync(path.join(packageDir, f), path.join(folder, f));
-    if (fs.existsSync(path.join(root, 'LICENSE'))) fs.copyFileSync(path.join(root, 'LICENSE'), path.join(folder, 'LICENSE'));
-    console.log('\nbuilt ' + zip(scratch, 'parsel', `Parsel-${version}-jars.zip`));
+    // One jar with every dependency inside (maven-shade): `java -jar Parsel-<v>.jar` is all it takes.
+    const fat = path.join(root, 'target', jar.replace(/\.jar$/, '-all.jar'));
+    if (!fs.existsSync(fat)) fail(`no ${fat}: run mvn clean package -DskipTests first`);
+    finish(fat, `Parsel-${version}.jar`);
     break;
   }
   default:

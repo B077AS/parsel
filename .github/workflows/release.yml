@@ -1,7 +1,7 @@
 name: Build release files
 
 # Runs when you publish a release on GitHub (Releases > Draft a new release > choose a tag such as v0.1.0 > Publish release).
-# It builds the Windows installer (a branded wizard) and portable zip, the Linux .deb and .tar.gz, and a zip of the jars, then attaches them to that
+# It builds the Windows installer (a branded wizard) and portable zip, the Linux .deb, .tar.gz and AppImage, and one fat jar, then attaches them to that
 # release. The tag decides the version, so tag it v0.1.0 for 0.1.0.
 #
 # "Run workflow" on the Actions tab does the same build without a release: the files only appear as downloads of that run, which
@@ -58,7 +58,7 @@ jobs:
           npm ci
           npm run build
 
-      - name: Build the jars
+      - name: Build the jars (and the fat jar)
         run: |
           mvn -B versions:set -DnewVersion="${VERSION#v}" -DgenerateBackupPoms=false
           mvn -B clean package -DskipTests
@@ -84,7 +84,7 @@ jobs:
         run: gh release upload "${{ github.event.release.tag_name }}" target/dist/* --clobber
 
   linux:
-    name: Linux (.deb, .tar.gz and jars)
+    name: Linux (.deb, .tar.gz, AppImage and fat jar)
     # The oldest Ubuntu GitHub still offers: a .deb names its dependencies as the building system calls them (Ubuntu 24.04 says
     # libasound2t64, which older systems do not have), and the bundled runtime needs a glibc no newer than the users'.
     runs-on: ubuntu-22.04
@@ -106,13 +106,21 @@ jobs:
       - name: Tools for building a .deb
         run: sudo apt-get update && sudo apt-get install -y fakeroot zip
 
+      # appimagetool is itself an AppImage and the runner has no FUSE, so a small script starts it with --appimage-extract-and-run.
+      - name: appimagetool
+        run: |
+          curl -fsSL -o /tmp/appimagetool.AppImage https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x /tmp/appimagetool.AppImage
+          printf '#!/bin/sh\nexec /tmp/appimagetool.AppImage --appimage-extract-and-run "$@"\n' | sudo tee /usr/local/bin/appimagetool >/dev/null
+          sudo chmod +x /usr/local/bin/appimagetool
+
       - name: Build the page
         working-directory: frontend
         run: |
           npm ci
           npm run build
 
-      - name: Build the jars
+      - name: Build the jars (and the fat jar)
         run: |
           mvn -B versions:set -DnewVersion="${VERSION#v}" -DgenerateBackupPoms=false
           mvn -B clean package -DskipTests
@@ -124,6 +132,7 @@ jobs:
         run: |
           node packaging/package.mjs linux-deb --version "$VERSION"
           node packaging/package.mjs linux-tarball --version "$VERSION"
+          node packaging/package.mjs linux-appimage --version "$VERSION"
           node packaging/package.mjs jars --version "$VERSION"
 
       - name: Checksums

@@ -91,7 +91,8 @@ Get the file for your system from the [latest release](https://github.com/B077AS
 | `Parsel-<version>-windows-x64-portable.zip` | Windows, no install: unzip and run `Parsel\Parsel.exe`. |
 | `Parsel-<version>-linux-amd64.deb` | Debian, Ubuntu and friends: `sudo apt install ./Parsel-<version>-linux-amd64.deb` |
 | `Parsel-<version>-linux-x64.tar.gz` | Other Linux systems: unpack and run `Parsel/bin/Parsel`. |
-| `Parsel-<version>-jars.zip` | Any system with Java 25: `java -jar parsel-<version>.jar` |
+| `Parsel-<version>-linux-x86_64.AppImage` | Any Linux, one file: `chmod +x` and run it. **Not the recommended choice**: it still needs the system's GTK, WebKitGTK and libsecret (it cannot carry them), so prefer the `.deb` or the `.tar.gz`. |
+| `Parsel-<version>.jar` | One jar with everything in it. Any system with Java 25: `java -jar Parsel-<version>.jar` |
 
 The installers carry their own Java runtime, so you do not need Java. On Linux you need GTK 3, WebKitGTK 4.1 and libsecret (the
 `.deb` pulls them in; otherwise `sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0 libsecret-1-0`). Checksums are in the

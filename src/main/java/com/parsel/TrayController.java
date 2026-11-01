@@ -114,6 +114,8 @@ final class TrayController {
 
     private void open() {
         window.focus();
+        // Showing a hidden window makes Windows build its taskbar button again; give it the current accent icon, not the file's.
+        window.setIcon(icon);
     }
 
     private TrayMenu menu() {
