@@ -16,7 +16,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>25</maven.compiler.release>
     <!-- Released on Maven Central. For unreleased Jolt changes: mvn install -DskipTests in the Jolt repo and use 0.1.0-SNAPSHOT. -->
-    <jolt.version>0.3.1</jolt.version>
+    <jolt.version>0.3.2</jolt.version>
     <parsel.dev>false</parsel.dev>
     <parsel.smoke>false</parsel.smoke>
     <parsel.demo>false</parsel.demo>
