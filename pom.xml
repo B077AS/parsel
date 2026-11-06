@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.parsel</groupId>
+  <groupId>io.github.b077as.parsel</groupId>
   <artifactId>parsel</artifactId>
   <version>0.1.0</version>
   <packaging>jar</packaging>
@@ -16,7 +16,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>25</maven.compiler.release>
     <!-- Released on Maven Central. For unreleased Jolt changes: mvn install -DskipTests in the Jolt repo and use 0.1.0-SNAPSHOT. -->
-    <jolt.version>0.3.2</jolt.version>
+    <jolt.version>0.3.3</jolt.version>
     <parsel.dev>false</parsel.dev>
     <parsel.smoke>false</parsel.smoke>
     <parsel.demo>false</parsel.demo>
@@ -110,7 +110,7 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>com.parsel.App</mainClass>
+              <mainClass>io.github.b077as.parsel.App</mainClass>
               <addClasspath>true</addClasspath>
             </manifest>
             <manifestEntries>
@@ -152,7 +152,7 @@
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                   <manifestEntries>
-                    <Main-Class>com.parsel.App</Main-Class>
+                    <Main-Class>io.github.b077as.parsel.App</Main-Class>
                     <Enable-Native-Access>ALL-UNNAMED</Enable-Native-Access>
                     <Multi-Release>true</Multi-Release>
                   </manifestEntries>
@@ -231,7 +231,7 @@
             <argument>-Dparsel.data=${parsel.data}</argument>
             <argument>-classpath</argument>
             <classpath/>
-            <argument>com.parsel.App</argument>
+            <argument>io.github.b077as.parsel.App</argument>
           </arguments>
         </configuration>
       </plugin>

@@ -1,7 +1,7 @@
 import { call } from './jolt';
 
 // One typed function per handler registered in Handlers.java and App.java. If you rename a handler there, change it here.
-// The interfaces mirror the records in com.parsel.mail.Mail and com.parsel.account.
+// The interfaces mirror the records in io.github.b077as.parsel.mail.Mail and io.github.b077as.parsel.account.
 
 export interface AppInfo {
   os: string;

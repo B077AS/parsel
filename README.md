@@ -160,7 +160,7 @@ is useful to you, a star helps other people find it.
 
 ### How Parsel is put together
 
-- **Java** (`src/main/java/com/parsel`) does the mail: IMAP and SMTP with Jakarta Mail, a SQLite cache, jsoup to clean what
+- **Java** (`src/main/java/io/github/b077as/parsel`) does the mail: IMAP and SMTP with Jakarta Mail, a SQLite cache, jsoup to clean what
   arrives, and the credentials.
 - **The page** (`frontend/`) is Vue 3 and TypeScript with plain CSS, headless Reka UI components, TipTap for the editor and
   Material Design icons.

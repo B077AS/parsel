@@ -94,7 +94,7 @@ function jpackage(extra) {
   const args = [
     '--input', packageDir,
     '--main-jar', jar,
-    '--main-class', 'com.parsel.App',
+    '--main-class', 'io.github.b077as.parsel.App',
     '--name', 'Parsel',
     '--app-version', appVersion,
     '--vendor', 'Parsel',

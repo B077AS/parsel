@@ -26,6 +26,8 @@ import Highlight from '@tiptap/extension-highlight';
 import TextAlign from '@tiptap/extension-text-align';
 import StarterKit from '@tiptap/starter-kit';
 import { EditorContent, useEditor } from '@tiptap/vue-3';
+import Image from '@tiptap/extension-image';
+import { showToast } from '../ui';
 import {
   DropdownMenuContent,
   DropdownMenuItem,
@@ -72,6 +74,48 @@ const HIGHLIGHTS = [
   { name: 'None', value: null },
 ];
 
+/** Pictures larger than this are refused: they travel inside the message. */
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const START_WIDTH = 480;
+const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+
+function unwrapSingleParagraph(html: string): string {
+  const body = new DOMParser().parseFromString(html, 'text/html').body;
+  const blocks = Array.from(body.childNodes).filter((n) => !(n.nodeType === Node.COMMENT_NODE || (n.nodeType === Node.TEXT_NODE && !n.textContent?.trim())));
+  if (blocks.length === 1 && blocks[0] instanceof HTMLParagraphElement) {
+    return blocks[0].innerHTML;
+  }
+  return html;
+}
+
+function pasteImages(files: FileList | undefined | null, event: Event): boolean {
+  const images = Array.from(files ?? []).filter((f) => IMAGE_TYPES.includes(f.type));
+  if (!images.length) return false;
+  event.preventDefault();
+  for (const file of images) {
+    if (file.size > MAX_IMAGE_BYTES) {
+      showToast('Picture not added', 'That picture is larger than 10 MB.', true);
+      continue;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const src = String(reader.result);
+      // Start at a sensible size: a screenshot is often wider than the whole editor.
+      const probe = new window.Image();
+      probe.onload = () => {
+        const scale = Math.min(1, START_WIDTH / (probe.naturalWidth || START_WIDTH));
+        const width = Math.max(1, Math.round(probe.naturalWidth * scale));
+        const height = Math.max(1, Math.round(probe.naturalHeight * scale));
+        editor.value?.chain().focus().setImage({ src, width, height }).run();
+      };
+      probe.onerror = () => showToast('Picture not added', 'This picture could not be read.', true);
+      probe.src = src;
+    };
+    reader.readAsDataURL(file);
+  }
+  return true;
+}
+
 const editor = useEditor({
   content: props.initial,
   extensions: [
@@ -81,8 +125,19 @@ const editor = useEditor({
     FontFamily,
     Highlight.configure({ multicolor: true }),
     TextAlign.configure({ types: ['heading', 'paragraph'] }),
+    Image.configure({
+      inline: true,
+      allowBase64: true,
+      resize: { enabled: true, directions: ['bottom-right', 'bottom-left', 'top-right', 'top-left'], minWidth: 24, minHeight: 24, alwaysPreserveAspectRatio: true },
+    }),
   ],
-  editorProps: { attributes: { 'aria-label': 'Message', spellcheck: 'true' } },
+  editorProps: {
+    attributes: { 'aria-label': 'Message', spellcheck: 'true' },
+    // Copying one whole paragraph (Ctrl+A, Ctrl+C) and pasting it would otherwise start a new paragraph: paste its text in place.
+    transformPastedHTML: unwrapSingleParagraph,
+    handlePaste: (_view, event) => pasteImages(event.clipboardData?.files, event),
+    handleDrop: (_view, event) => pasteImages(event.dataTransfer?.files, event),
+  },
   onUpdate: ({ editor }) => emit('change', editor.getHTML()),
 });
 onBeforeUnmount(() => editor.value?.destroy());
@@ -467,6 +522,47 @@ function removeLink(): void {
   background: var(--bg-side);
   font: 13px/1.5 ui-monospace, Consolas, monospace;
   white-space: pre-wrap;
+}
+/* Pictures: never wider than the editor, with TipTap's resize handles (it adds them unstyled) shown on the selected one. */
+.content :deep([data-resize-container]) {
+  max-width: 100%;
+  vertical-align: bottom;
+}
+.content :deep(img) {
+  display: block;
+  max-width: 100%;
+  height: auto !important;
+}
+.content :deep([data-resize-container].ProseMirror-selectednode [data-resize-wrapper]) {
+  outline: 2px solid var(--accent);
+}
+.content :deep([data-resize-handle]) {
+  display: none;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: var(--bg);
+  z-index: 2;
+}
+.content :deep([data-resize-container].ProseMirror-selectednode [data-resize-handle]) {
+  display: block;
+}
+.content :deep([data-resize-handle="top-left"]) {
+  margin: -5px 0 0 -5px;
+  cursor: nwse-resize;
+}
+.content :deep([data-resize-handle="top-right"]) {
+  margin: -5px -5px 0 0;
+  cursor: nesw-resize;
+}
+.content :deep([data-resize-handle="bottom-left"]) {
+  margin: 0 0 -5px -5px;
+  cursor: nesw-resize;
+}
+.content :deep([data-resize-handle="bottom-right"]) {
+  margin: 0 -5px -5px 0;
+  cursor: nwse-resize;
 }
 .content :deep(a) {
   color: var(--accent);
