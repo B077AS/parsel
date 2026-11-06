@@ -68,10 +68,6 @@ jobs:
           node packaging/package.mjs windows-installer --version "$VERSION"
           node packaging/package.mjs windows-portable --version "$VERSION"
 
-      - name: Checksums
-        working-directory: target/dist
-        run: sha256sum * > SHA256SUMS-windows.txt
-
       - uses: actions/upload-artifact@v4
         with:
           name: windows
@@ -134,10 +130,6 @@ jobs:
           node packaging/package.mjs linux-tarball --version "$VERSION"
           node packaging/package.mjs linux-appimage --version "$VERSION"
           node packaging/package.mjs jars --version "$VERSION"
-
-      - name: Checksums
-        working-directory: target/dist
-        run: sha256sum * > SHA256SUMS-linux.txt
 
       - uses: actions/upload-artifact@v4
         with:

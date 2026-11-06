@@ -95,8 +95,7 @@ Get the file for your system from the [latest release](https://github.com/B077AS
 | `Parsel-<version>.jar` | One jar with everything in it. Any system with Java 25: `java -jar Parsel-<version>.jar` |
 
 The installers carry their own Java runtime, so you do not need Java. On Linux you need GTK 3, WebKitGTK 4.1 and libsecret (the
-`.deb` pulls them in; otherwise `sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0 libsecret-1-0`). Checksums are in the
-`SHA256SUMS` files next to the downloads.
+`.deb` pulls them in; otherwise `sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0 libsecret-1-0`).
 
 > **Status: early.** Parsel is developed on Windows and that is where it has been used by hand. The Linux packages are built
 > and start, and the app was checked on Linux inside a container, but they have had far less real use. If something is rough,
@@ -118,11 +117,10 @@ mvn compile exec:exec "-Dparsel.demo=true"            # or try it with invented 
 `mvn clean package -DskipTests` and then `node packaging/package.mjs windows-installer` (or `windows-portable`, `linux-deb`,
 `linux-tarball`, `jars`); the files land in `target/dist`. Publishing a release on GitHub does all of this for you.
 
-## Built on Jolt
-
-<p align="center">
-  <a href="https://github.com/B077AS/jolt"><img src="https://raw.githubusercontent.com/B077AS/jolt/master/.github/icon.png" alt="Jolt" width="72"></a>
-</p>
+<h2>
+  <a href="https://github.com/B077AS/jolt"><img src="https://raw.githubusercontent.com/B077AS/jolt/master/.github/icon.png" alt="Jolt" width="40" align="absmiddle"></a>
+  Built on Jolt
+</h2>
 
 Parsel is a showcase for **[Jolt](https://github.com/B077AS/jolt)**, a framework for desktop apps with web UIs, in plain Java.
 It is made by the same author, and the two grew up together.
