@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parsel</title>
+<style>
+/* The launcher page. Colours are Parsel's own tokens (frontend/src/styles/tokens.css); the accent comes from Java. */
+:root {
+  --font: system-ui, 'Segoe UI', 'Noto Sans', sans-serif;
+  --mono: 'Cascadia Code', 'JetBrains Mono', Consolas, 'DejaVu Sans Mono', monospace;
+  --bg-side: #f3f3f1;
+  --paper: #ffffff;
+  --border-strong: #cfcfca;
+  --text: #1c1c1a;
+  --text-2: #55554f;
+  --text-3: #86867f;
+  --danger: #c4332b;
+  --accent: #2a62d9;
+  --on-accent: #ffffff;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg-side: #141413;
+  --paper: #222221;
+  --border-strong: #42423f;
+  --text: #ececea;
+  --text-2: #b0b0aa;
+  --text-3: #7d7d77;
+  --danger: #f0786f;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg-side);
+  color: var(--text);
+  font: 13px/1.45 var(--font);
+  border: 1px solid var(--border-strong);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+  cursor: default;
+}
+/* Jolt's title bar kit (data-jolt-titlebar="close"): moves the window and adds a close button. */
+header {
+  height: 34px; flex: none; display: flex; align-items: center;
+  --jolt-caption-fg: var(--text-3);
+  --jolt-caption-hover-fg: var(--text);
+  --jolt-caption-hover-bg: color-mix(in srgb, var(--text) 10%, transparent);
+}
+main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 0 24px 22px; min-height: 0; }
+
+/* The name, and the version underneath (old -> new while an update is on the way). */
+.brand { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: -12px; }
+.brand .name { font-size: 28px; font-weight: 650; letter-spacing: -0.025em; line-height: 1; }
+.brand .ver { font-family: var(--mono); font-size: 11.5px; color: var(--text-3); font-variant-numeric: tabular-nums; min-height: 1.4em; }
+.brand .ver b { color: var(--text-2); font-weight: 500; }
+
+svg.art { width: 200px; height: 150px; flex: none; overflow: visible; }
+.paper { fill: var(--paper); stroke: var(--border-strong); stroke-width: 1; }
+.flap { fill: var(--paper); stroke: var(--border-strong); stroke-width: 1; }
+.seal { fill: var(--accent); }
+.seal-ring { fill: none; stroke: var(--on-accent); stroke-width: 1.2; opacity: .55; }
+.line { fill: var(--text-3); opacity: .55; }
+.line.first { fill: var(--accent); opacity: 1; transition: fill .3s; }
+.fail .line.first { fill: var(--danger); }
+
+.caption { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 58px; text-align: center; width: 100%; }
+.caption b { font-size: 14px; font-weight: 600; }
+.caption .sub { font-size: 12px; color: var(--text-2); min-height: 1.45em; }
+.caption .sub.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.caption .sub.err { color: var(--danger); }
+.buttons { display: flex; gap: 8px; margin-top: 8px; }
+.buttons[hidden] { display: none; }
+button.btn { font: inherit; font-size: 12.5px; padding: 4px 16px; border-radius: 4px; border: 1px solid var(--border-strong); background: transparent; color: var(--text); cursor: pointer; }
+button.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+button.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header data-jolt-titlebar="close"></header>
+<main id="main">
+  <div class="brand" data-jolt-drag>
+    <span class="name">Parsel</span>
+    <div id="ver" class="ver">&nbsp;</div>
+  </div>
+  <!-- The envelope is 128 x 68 at (36, 64). The paper flap is flat and rolls down from the top edge (a clip that grows). Closed,
+       it covers both top corners and reaches below the pocket's V (tip at 108 against 102), so the envelope has no gap. Then a
+       round seal in the accent colour is pressed onto the flap's tip: the only colour on the envelope. -->
+  <svg class="art" viewBox="0 0 200 150" aria-hidden="true">
+    <defs>
+      <clipPath id="above-bottom"><rect x="0" y="-40" width="200" height="172"/></clipPath>
+      <clipPath id="roll"><rect id="roll-rect" x="30" y="63.5" width="140" height="0"/></clipPath>
+    </defs>
+    <rect class="paper" x="36" y="64" width="128" height="68" rx="4"/>
+    <g clip-path="url(#above-bottom)">
+      <g id="sheet">
+        <rect class="paper" x="58" y="0" width="84" height="84" rx="3"/>
+        <rect class="line first" x="68" y="11" height="5" rx="1.75" width="0"/>
+        <rect class="line" x="68" y="21" height="3.5" rx="1.75" width="0"/>
+        <rect class="line" x="68" y="31" height="3.5" rx="1.75" width="0"/>
+        <rect class="line" x="68" y="41" height="3.5" rx="1.75" width="0"/>
+        <rect class="line" x="68" y="51" height="3.5" rx="1.75" width="0"/>
+        <rect class="line" x="68" y="61" height="3.5" rx="1.75" width="0"/>
+      </g>
+    </g>
+    <path class="paper" stroke-linejoin="round" d="M36 68 Q36 64 40 64 L100 102 L160 64 Q164 64 164 68 V128 Q164 132 160 132 H40 Q36 132 36 128 Z"/>
+    <path class="flap" clip-path="url(#roll)" stroke-linejoin="round" d="M40 64 H160 Q164 64 164 68 L104.5 106 Q100 109 95.5 106 L36 68 Q36 64 40 64 Z"/>
+    <g id="seal" opacity="0">
+      <circle class="seal" r="11"/>
+      <circle class="seal-ring" r="7"/>
+    </g>
+  </svg>
+  <div class="caption" role="status" aria-live="polite">
+    <b id="title">Checking for updates</b>
+    <span id="sub" class="sub">&nbsp;</span>
+    <div id="buttons" class="buttons" hidden>
+      <button id="retry" class="btn primary" type="button">Retry</button>
+      <button id="quit" class="btn" type="button">Quit</button>
+    </div>
+  </div>
+</main>
+<script>
+(function () {
+  var boot = window.__LAUNCHER__ || {};
+  var root = document.documentElement;
+  var dark = boot.scheme === 'dark' || (boot.scheme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+  root.dataset.theme = dark ? 'dark' : 'light';
+  var hex = /^#[0-9a-f]{6}$/i;
+  var accent = dark ? boot.accentDark : boot.accent, onAccent = dark ? boot.onAccentDark : boot.onAccent;
+  if (hex.test(accent || '')) root.style.setProperty('--accent', accent);
+  if (hex.test(onAccent || '')) root.style.setProperty('--on-accent', onAccent);
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var el = { main: document.getElementById('main'), title: document.getElementById('title'), sub: document.getElementById('sub'),
+             ver: document.getElementById('ver'), buttons: document.getElementById('buttons'), sheet: document.getElementById('sheet'),
+             roll: document.getElementById('roll-rect'), seal: document.getElementById('seal'),
+             lines: Array.prototype.slice.call(document.querySelectorAll('#sheet .line')) };
+  var WIDTHS = [40, 62, 56, 64, 38, 50];
+  var OUT = -10, IN = 68;     // where the letter stands while it is written, and where it rests inside the envelope
+  // Seconds: the letter slides in, the flap rolls down, then the seal is pressed on (starting PRESS_AT after the flap began).
+  // Java waits long enough for all of it (UpdateManager INSTALLING_MS and SEAL_MS).
+  var SLIDE = 0.9, FLAP = 0.6, PRESS_AT = 0.55, PRESS = 0.35;
+
+  // phase: checking | downloading | installing | starting | error; since: when it began (seconds).
+  var state = { phase: 'checking', since: 0, target: 0, shown: 0, wrote: false, current: '', latest: '', note: '' };
+
+  function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
+  function ease(x) { x = clamp(x, 0, 1); return x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; }
+  // Overshoots a little before settling: the seal is pressed down slightly past its size and springs back.
+  function back(x) { var c = 1.70158; x = clamp(x, 0, 1) - 1; return 1 + (c + 1) * x * x * x + c * x * x; }
+  function r(n) { return Math.round(n * 100) / 100; }
+  function now() { return performance.now() / 1000; }
+  function go(phase) { state.phase = phase; state.since = now(); }
+
+  // ---- the drawing, every frame
+  var last = now();
+  function frame() {
+    var t = now(), dt = Math.min(0.1, t - last), k = t - state.since;
+    last = t;
+    var gap = state.target - state.shown;
+    // Ease towards the target, and land on it exactly: an exponential ease alone never quite arrives.
+    state.shown = reduce || Math.abs(gap) < 0.004 || gap < 0 ? state.target : state.shown + gap * Math.min(1, dt * 5.5);
+
+    var y = OUT, fill = state.shown, sealing = -1;
+    if (state.phase === 'checking') {
+      y = OUT + (reduce ? 0 : Math.sin(t * 2.4) * 2);
+    } else if (state.phase === 'installing') {
+      fill = 1; y = OUT + (IN - OUT) * (reduce ? 1 : ease(k / SLIDE));
+    } else if (state.phase === 'starting') {
+      fill = 1;
+      if (state.wrote) {           // the letter went in while installing: only the flap and the seal are left
+        y = IN; sealing = k;
+      } else {                     // nothing to download: in it goes, then the flap and the seal
+        y = OUT + (IN - OUT) * (reduce ? 1 : ease(k / SLIDE));
+        sealing = k - SLIDE;
+      }
+      if (reduce) sealing = 9;
+    }
+    el.sheet.setAttribute('transform', 'translate(0 ' + r(y) + ')');
+    for (var i = 0; i < 6; i++) el.lines[i].setAttribute('width', r(WIDTHS[i] * clamp(fill * 6 - i, 0, 1)));
+
+    // The flap rolls down from the top edge until it covers the opening (47 units: down to just below its tip), then the seal
+    // comes down onto its tip from a little above (scale 1.6 to 1) and fades in on the way.
+    el.roll.setAttribute('height', r(47 * ease(sealing / FLAP)));
+    var press = clamp((sealing - PRESS_AT) / PRESS, 0, 1);
+    el.seal.setAttribute('transform', 'translate(100 106) scale(' + r(press === 0 ? 1.6 : 1.6 - 0.6 * back(press)) + ')');
+    el.seal.setAttribute('opacity', r(clamp(press * 3, 0, 1)));
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // ---- the words
+  function mb(n) { return (n / 1048576).toFixed(1); }
+  function say(title, sub, kind) {
+    el.title.textContent = title;
+    el.sub.textContent = sub || ' ';
+    el.sub.className = 'sub' + (kind ? ' ' + kind : '');
+  }
+  function versionLine() {
+    if (state.latest && state.current && state.latest !== state.current) {
+      el.ver.textContent = state.current + ' → ';
+      var b = document.createElement('b');
+      b.textContent = state.latest;
+      el.ver.append(b);
+    } else {
+      el.ver.textContent = state.current || state.latest || ' ';
+    }
+  }
+  function setFailed(on) {
+    el.main.classList.toggle('fail', on);
+    el.buttons.hidden = !on;
+  }
+
+  var handlers = {
+    installed: function (m) {
+      state.current = m.version;
+      versionLine();
+    },
+    phase: function (m) {
+      setFailed(false);
+      if (m.phase === 'checking') {
+        state.target = 0; state.shown = 0; state.wrote = false;
+        go('checking');
+        say('Checking for updates', '');
+      } else if (m.phase === 'downloading') {
+        go('downloading');
+        say('Downloading update', '', 'mono');
+      } else if (m.phase === 'installing') {
+        state.target = 1; state.shown = 1; state.wrote = true;
+        go('installing');
+        say('Installing update', '');
+      } else if (m.phase === 'starting') {
+        state.target = 1;
+        if (state.latest) { state.current = state.latest; state.latest = ''; versionLine(); }
+        go('starting');
+        say('Starting Parsel', state.note);
+      }
+    },
+    update: function (m) {
+      state.current = m.current; state.latest = m.latest;
+      versionLine();
+    },
+    progress: function (m) {
+      var f = m.total > 0 ? Math.min(1, m.received / m.total) : 0;
+      state.target = f;
+      say('Downloading update', Math.round(f * 100) + '% · ' + mb(m.received) + ' / ' + mb(m.total) + ' MB', 'mono');
+    },
+    note: function (m) {
+      state.note = m.message;
+    },
+    error: function (m) {
+      // The letter stops where it was; the flap and the subject line turn red.
+      state.phase = 'error';
+      setFailed(true);
+      say('Update stopped', m.message, 'err');
+    }
+  };
+
+  if (window.jolt) {
+    jolt.onMessage(function (text) {
+      var m;
+      try { m = JSON.parse(text); } catch (e) { return; }
+      if (m && handlers[m.type]) handlers[m.type](m);
+    });
+  }
+  function send(text) { if (window.jolt) jolt.postMessage(text); }
+
+  document.getElementById('retry').addEventListener('click', function () {
+    state.note = ''; state.target = 0; state.shown = 0; state.wrote = false;
+    setFailed(false);
+    go('checking');
+    say('Checking for updates', '');
+    send('retry');
+  });
+  document.getElementById('quit').addEventListener('click', function () { send('quit'); });
+
+  // Tell Java the page is in place, so it can show the window and start. Not from requestAnimationFrame: a hidden web view never
+  // runs it, so the window would only appear when Java's fallback timer fired, seconds later.
+  send('ready');
+})();
+</script>
+</body>
+</html>

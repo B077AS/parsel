@@ -87,18 +87,17 @@ Get the file for your system from the [latest release](https://github.com/B077AS
 
 | File | For |
 | --- | --- |
-| `Parsel-<version>-windows-x64-setup.exe` | Windows 10 and 11. Installs for your user only, no administrator rights. |
-| `Parsel-<version>-windows-x64-portable.zip` | Windows, no install: unzip and run `Parsel\Parsel.exe`. |
-| `Parsel-<version>-linux-amd64.deb` | Debian, Ubuntu and friends: `sudo apt install ./Parsel-<version>-linux-amd64.deb` |
-| `Parsel-<version>-linux-x64.tar.gz` | Other Linux systems: unpack and run `Parsel/bin/Parsel`. |
-| `Parsel-<version>-linux-x86_64.AppImage` | Any Linux, one file: `chmod +x` and run it. **Not the recommended choice**: it still needs the system's GTK, WebKitGTK and libsecret (it cannot carry them), so prefer the `.deb` or the `.tar.gz`. |
-| `Parsel-<version>.jar` | One jar with everything in it. Any system with Java 25: `java -jar Parsel-<version>.jar` |
+| [`Parsel-Setup.exe`](https://github.com/B077AS/parsel/releases/latest/download/Parsel-Setup.exe) | Windows 10 and 11. Installs for your user only, no administrator rights. |
+| [`Parsel.AppImage`](https://github.com/B077AS/parsel/releases/latest/download/Parsel.AppImage) | Linux, one file: `chmod +x Parsel.AppImage` and run it. |
 
-The installers carry their own Java runtime, so you do not need Java. On Linux you need GTK 3, WebKitGTK 4.1 and libsecret (the
-`.deb` pulls them in; otherwise `sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0 libsecret-1-0`).
+Both carry their own Java runtime, so you do not need Java. On Linux you need GTK 3, WebKitGTK 4.1 and libsecret, which most desktops
+already have (`sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0 libsecret-1-0` on Debian and Ubuntu).
 
-> **Status: early.** Parsel is developed on Windows and that is where it has been used by hand. The Linux packages are built
-> and start, and the app was checked on Linux inside a container, but they have had far less real use. If something is rough,
+Parsel keeps itself up to date: each time it starts, a small window checks for a new release, downloads only what changed and then
+opens Parsel. Without a connection it opens the version you have.
+
+> **Status: early.** Parsel is developed on Windows and that is where it has been used by hand. The app was checked on
+> Linux inside a container, but the Linux AppImage has had far less use than the Windows installer. If something is rough,
 > please open an issue.
 
 ## Build it yourself
@@ -113,9 +112,10 @@ mvn compile exec:exec                                 # run the app
 mvn compile exec:exec "-Dparsel.demo=true"            # or try it with invented mail and no account
 ```
 
-`mvn test` runs the tests (the mail layer against an in-memory IMAP and SMTP server). To build the installers, run
-`mvn clean package -DskipTests` and then `node packaging/package.mjs windows-installer` (or `windows-portable`, `linux-deb`,
-`linux-tarball`, `jars`); the files land in `target/dist`. Publishing a release on GitHub does all of this for you.
+`mvn test` runs the tests (the mail layer against an in-memory IMAP and SMTP server). To build the self-updating install, run
+`mvn -f launcher/pom.xml clean package`, then `mvn clean package -Pjpack -DskipTests`; the install folder lands in
+`target/jpack/image/<platform>` (built with [jpack](https://github.com/B077AS/jpack)). Publishing a release on GitHub builds the
+installer and the AppImage for you.
 
 <h2>
   <a href="https://github.com/B077AS/jolt"><img src="https://raw.githubusercontent.com/B077AS/jolt/master/.github/icon.png" alt="Jolt" width="40" align="absmiddle"></a>

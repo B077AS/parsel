@@ -10,6 +10,8 @@ import io.github.b077as.parsel.mail.LocalMailService;
 import io.github.b077as.parsel.mail.MailService;
 import io.github.b077as.parsel.imap.ImapClient;
 import io.github.b077as.parsel.send.SendService;
+import io.github.b077as.parsel.install.AppsFeatures;
+import io.github.b077as.parsel.install.OnScreen;
 import io.github.b077as.parsel.settings.SettingsStore;
 import io.github.b077as.parsel.settings.SettingsStore.Settings;
 import io.github.b077as.parsel.settings.ThemeRequest;
@@ -70,6 +72,8 @@ public final class App {
 
         // Before any window: lets the taskbar show the window's accent icon instead of the installer shortcut's (see WindowsTaskbar).
         WindowsTaskbar.setAppId(APP_ID);
+        // After a self-update the installer's "Apps & features" entry still names the first version: correct it (installed copies only).
+        Thread.ofVirtual().start(AppsFeatures::syncVersion);
 
         // GTK's file chooser prints harmless "GFileInfo created without standard::size" warnings on Linux; hide just those.
         AppOptions appOptions = AppOptions.of(APP_ID).withQuietNativeLogs(true);
@@ -97,7 +101,7 @@ public final class App {
                         .withDevTools(dev)
                         .withVisible(false), saved);
                 WebWindow window = app.createWindow(options);
-                showAnywayLater(window);
+                showAnywayLater(app, window);
                 window.addInitScript(bootScript(saved, app, demo));
 
                 Rpc rpc = new Rpc(window);
@@ -178,7 +182,7 @@ public final class App {
                             .withIcon(readIcon())
                             .withDevTools(dev)
                             .withVisible(false), now));
-                    showAnywayLater(popout);
+                    showAnywayLater(app, popout);
                     popout.addInitScript(bootScript(now, app, demo));
                     Rpc popoutRpc = new Rpc(popout);
                     registerWindowRpc(app, popout, popoutRpc, settings, tray);
@@ -261,7 +265,7 @@ public final class App {
         rpc.on("app.info", params -> Map.of(
                 "os", System.getProperty("os.name"),
                 "java", System.getProperty("java.version")));
-        registerTheme(rpc, window, settings, tray);
+        registerTheme(app, rpc, window, settings, tray);
         // A message being written moves to a window of its own through here (see DraftStash).
         rpc.on("compose.stash", params -> {
             if (!params.has("draft") || !params.get("draft").isJsonObject()) {
@@ -316,14 +320,15 @@ public final class App {
     /** How long to wait for the page before showing the window anyway, so a broken page can never leave the app invisible. */
     private static final Duration SHOW_ANYWAY_AFTER = Duration.ofSeconds(10);
 
-    private static void showAnywayLater(WebWindow window) {
+    private static void showAnywayLater(Application app, WebWindow window) {
         Thread.ofVirtual().start(() -> {
             try {
                 Thread.sleep(SHOW_ANYWAY_AFTER);
             } catch (InterruptedException e) {
                 return;
             }
-            window.show(); // harmless if the window is already showing
+            // Also tells the launcher, which stays on screen until Parsel's window is up (see OnScreen).
+            OnScreen.show(app, window);
         });
     }
 
@@ -362,12 +367,12 @@ public final class App {
         }
     }
 
-    private static void registerTheme(Rpc rpc, WebWindow window, SettingsStore settings, TrayController tray) {
+    private static void registerTheme(Application app, Rpc rpc, WebWindow window, SettingsStore settings, TrayController tray) {
         int[][] lastIconColours = {null};
         rpc
                 // The page has its content on screen: now the window can appear (maximized) without a blank flash.
                 .on("window.ready", params -> {
-                    window.show();
+                    OnScreen.show(app, window); // the launcher closes once it hears this
                     return Map.of("ok", true);
                 })
                 // The page cannot restyle the operating system's title bar, but it can ask Java to.

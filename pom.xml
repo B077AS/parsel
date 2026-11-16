@@ -16,7 +16,12 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>25</maven.compiler.release>
     <!-- Released on Maven Central. For unreleased Jolt changes: mvn install -DskipTests in the Jolt repo and use 0.1.0-SNAPSHOT. -->
-    <jolt.version>0.3.3</jolt.version>
+    <jolt.version>0.4.1</jolt.version>
+    <!-- Install and updates (see "Install, updates and the launcher" in CLAUDE.md). Keep the plugin (it bundles the stub) and
+         jpack-api on the same release, and launcher/pom.xml's jpack.api.version too: notifyShown needs a stub from 0.1.3 on.
+         Do not add a property called jpack.version: it is the jpack plugin's own version parameter and would replace the release version. -->
+    <jpack.plugin.version>0.1.3</jpack.plugin.version>
+    <jpack.api.version>0.1.3</jpack.api.version>
     <parsel.dev>false</parsel.dev>
     <parsel.smoke>false</parsel.smoke>
     <parsel.demo>false</parsel.demo>
@@ -44,6 +49,12 @@
       <groupId>io.github.b077as</groupId>
       <artifactId>jolt-credentials</artifactId>
       <version>${jolt.version}</version>
+    </dependency>
+    <!-- Tells the launcher (through the jpack stub) when the window is on screen. Does nothing outside an installed copy. -->
+    <dependency>
+      <groupId>io.github.b077as</groupId>
+      <artifactId>jpack-api</artifactId>
+      <version>${jpack.api.version}</version>
     </dependency>
     <dependency>
       <groupId>com.google.code.gson</groupId>
@@ -111,7 +122,6 @@
           <archive>
             <manifest>
               <mainClass>io.github.b077as.parsel.App</mainClass>
-              <addClasspath>true</addClasspath>
             </manifest>
             <manifestEntries>
               <Enable-Native-Access>ALL-UNNAMED</Enable-Native-Access>
@@ -119,8 +129,7 @@
           </archive>
         </configuration>
       </plugin>
-      <!-- One jar with everything in it (target/parsel-<version>-all.jar): `java -jar` and nothing else. The plain jar stays as it is, because jpackage
-           wants the separate jars. -->
+      <!-- The jar (target/parsel-<version>.jar) has every dependency in it: it is the "app" part of a jpack release, and `java -jar` runs it. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
@@ -133,8 +142,6 @@
               <goal>shade</goal>
             </goals>
             <configuration>
-              <shadedArtifactAttached>true</shadedArtifactAttached>
-              <shadedClassifierName>all</shadedClassifierName>
               <createDependencyReducedPom>false</createDependencyReducedPom>
               <filters>
                 <filter>
@@ -176,44 +183,6 @@
           </execution>
         </executions>
       </plugin>
-      <!-- Collects the app jar and every runtime dependency in target/package, ready to run or to hand to jpackage. -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <version>3.8.1</version>
-        <executions>
-          <execution>
-            <id>collect-runtime-jars</id>
-            <phase>package</phase>
-            <goals>
-              <goal>copy-dependencies</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}/package</outputDirectory>
-              <includeScope>runtime</includeScope>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>3.1.0</version>
-        <executions>
-          <execution>
-            <id>add-app-jar</id>
-            <phase>package</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-                <copy file="${project.build.directory}/${project.build.finalName}.jar" todir="${project.build.directory}/package"/>
-              </target>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
       <!-- mvn compile exec:exec            runs the app with the built UI from src/main/resources/ui
            mvn compile exec:exec -Dparsel.dev=true   loads the Vite dev server instead (npm run dev in frontend/) -->
       <plugin>
@@ -237,4 +206,31 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <!-- The self-updating install, built with jpack (settings in src/jpack/jpack.json): a jlink Java runtime shared by the launcher
+           and Parsel, the jpack stub (Parsel.exe / the AppImage's AppRun), the install folder and the release files.
+             mvn -f launcher/pom.xml clean package     (first: the launcher jar)
+             mvn clean package -Pjpack -DskipTests
+             -> target/jpack/image/<platform>/ (the install folder), target/jpack/release/ (what a GitHub release carries) -->
+      <id>jpack</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>io.github.b077as</groupId>
+            <artifactId>jpack-maven-plugin</artifactId>
+            <version>${jpack.plugin.version}</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>package</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
