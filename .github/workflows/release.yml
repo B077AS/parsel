@@ -36,6 +36,9 @@ on:
 permissions:
   contents: write
 
+env:
+  MIN_JAVA: "25.0.5.1"
+
 jobs:
   version:
     runs-on: ubuntu-latest
@@ -70,7 +73,7 @@ jobs:
 
       - uses: actions/setup-java@v5
         with:
-          distribution: temurin
+          distribution: zulu
           java-version: "25"
           cache: maven
 
@@ -130,7 +133,7 @@ jobs:
 
       - uses: actions/setup-java@v5
         with:
-          distribution: temurin
+          distribution: zulu
           java-version: "25"
           cache: maven
 
@@ -166,6 +169,9 @@ jobs:
           for m in $need; do
             echo "$have" | grep -qx "$m" || { echo "the runtime is missing $m: add it to modules in src/jpack/jpack.json"; exit 1; }
           done
+          runtime_version=$(sed -n 's/^JAVA_VERSION="\(.*\)"$/\1/p' target/jpack/image/windows-x64/runtime/release)
+          echo "bundled Java runtime: $runtime_version"
+          [ "$(printf '%s\n%s\n' "$MIN_JAVA" "$runtime_version" | sort -V | head -n1)" = "$MIN_JAVA" ] || { echo "the bundled runtime is $runtime_version, older than $MIN_JAVA"; exit 1; }
 
       - name: Install Inno Setup
         shell: pwsh
@@ -212,7 +218,7 @@ jobs:
 
       - uses: actions/setup-java@v5
         with:
-          distribution: temurin
+          distribution: zulu
           java-version: "25"
           cache: maven
 
@@ -254,6 +260,9 @@ jobs:
           for m in $need; do
             echo "$have" | grep -qx "$m" || { echo "the runtime is missing $m: add it to modules in src/jpack/jpack.json"; exit 1; }
           done
+          runtime_version=$(sed -n 's/^JAVA_VERSION="\(.*\)"$/\1/p' target/jpack/image/linux-x64/runtime/release)
+          echo "bundled Java runtime: $runtime_version"
+          [ "$(printf '%s\n%s\n' "$MIN_JAVA" "$runtime_version" | sort -V | head -n1)" = "$MIN_JAVA" ] || { echo "the bundled runtime is $runtime_version, older than $MIN_JAVA"; exit 1; }
           test -s target/jpack/release/Parsel.AppImage
           test -s target/jpack/release/Parsel.AppImage.blocks
 
