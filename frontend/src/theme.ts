@@ -1,4 +1,5 @@
 import { computed, reactive, watch } from 'vue';
+import { errorText } from './jolt';
 import { accentByKey } from './accents';
 import { api, type Density, type Preference } from './api';
 
@@ -34,7 +35,7 @@ export async function setCloseToTray(enabled: boolean): Promise<void> {
     await api.setCloseToTray(enabled);
     tray.closeToTray = enabled;
   } catch (e) {
-    tray.error = e instanceof Error ? e.message : String(e);
+    tray.error = errorText(e);
   }
 }
 

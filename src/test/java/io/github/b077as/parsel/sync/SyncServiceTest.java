@@ -5,6 +5,7 @@ import com.icegreen.greenmail.user.GreenMailUser;
 import com.icegreen.greenmail.util.ServerSetupTest;
 import io.github.b077as.parsel.account.AccountSettings;
 import io.github.b077as.parsel.account.Security;
+import io.github.b077as.parsel.account.UserFacingException;
 import io.github.b077as.parsel.credentials.CredentialBroker;
 import io.github.b077as.parsel.mail.Mail;
 import io.github.b077as.parsel.store.Database;
@@ -482,7 +483,7 @@ class SyncServiceTest {
             }
         });
 
-        IllegalStateException e = assertThrows(IllegalStateException.class, () -> sync.archive(id));
+        UserFacingException e = assertThrows(UserFacingException.class, () -> sync.archive(id));
 
         assertTrue(e.getMessage().startsWith("Could not archive"), e.getMessage());
         assertEquals(List.of("gone soon"), inboxSubjects(), "still listed: nothing is dropped when the move fails");
@@ -564,12 +565,12 @@ class SyncServiceTest {
         sync.createFolder(accountId, null, "Taken");
 
         for (String bad : new String[]{"", "   ", "a/b", "a*b", "back\\slash", "inbox", "x".repeat(101)}) {
-            assertThrows(IllegalArgumentException.class, () -> sync.createFolder(accountId, null, bad), "[" + bad + "]");
+            assertThrows(UserFacingException.class, () -> sync.createFolder(accountId, null, bad), "[" + bad + "]");
         }
-        IllegalArgumentException taken = assertThrows(IllegalArgumentException.class, () -> sync.createFolder(accountId, null, "Taken"));
+        UserFacingException taken = assertThrows(UserFacingException.class, () -> sync.createFolder(accountId, null, "Taken"));
         assertTrue(taken.getMessage().contains("already a folder"), taken.getMessage());
         Mail.Folder work = sync.createFolder(accountId, null, "Work");
-        IllegalArgumentException dot = assertThrows(IllegalArgumentException.class, () -> sync.createFolder(accountId, work.id(), "a.b"));
+        UserFacingException dot = assertThrows(UserFacingException.class, () -> sync.createFolder(accountId, work.id(), "a.b"));
         assertTrue(dot.getMessage().contains("cannot contain"), "the server's own separator is not allowed in a name: " + dot.getMessage());
     }
 

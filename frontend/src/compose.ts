@@ -1,7 +1,7 @@
 import { mdiEmailCheckOutline } from '@mdi/js';
 import { reactive, watch } from 'vue';
 import { api, type DraftState, type PickedFile, type Prefill, type ReplyMode } from './api';
-import { openWindow } from './jolt';
+import { openWindow, errorText } from './jolt';
 import { ALL, mail } from './mail';
 import { showToast, ui } from './ui';
 
@@ -97,7 +97,7 @@ export async function popOutCompose(): Promise<void> {
     }
     closeCompose();
   } catch (e) {
-    showToast('Could not open a new window', e instanceof Error ? e.message : String(e), true);
+    showToast('Could not open a new window', errorText(e), true);
   }
 }
 
@@ -116,7 +116,7 @@ export async function returnDraft(token: string): Promise<void> {
     restoreDraft(await api.takeDraft(token));
     ui.screen = 'mail';
   } catch (e) {
-    showToast('Could not bring the message back', e instanceof Error ? e.message : String(e), true);
+    showToast('Could not bring the message back', errorText(e), true);
   }
 }
 watch(
@@ -159,7 +159,7 @@ export async function attachFiles(): Promise<void> {
     const picked = await api.pickAttachments();
     compose.attachments.push(...picked.filter((p) => !compose.attachments.some((a) => a.id === p.id)));
   } catch (e) {
-    compose.error = e instanceof Error ? e.message : String(e);
+    compose.error = errorText(e);
   } finally {
     compose.picking = false;
   }
@@ -182,7 +182,7 @@ export async function startReply(mode: ReplyMode, messageId?: string): Promise<v
     if (id !== mail.detail?.summary.id) await api.get(id);
     openCompose(await api.reply(id, mode));
   } catch (e) {
-    showToast('Could not open the reply', e instanceof Error ? e.message : String(e), true);
+    showToast('Could not open the reply', errorText(e), true);
     return;
   }
   if (mode !== 'forward') void refineRecipients(id, mode);
@@ -246,7 +246,7 @@ export async function sendMessage(): Promise<void> {
     if (result.warning) showToast('Message sent', result.warning, true);
     else showToast('Message sent', more > 0 ? `To ${first} and ${more} more` : `To ${first}`, false, mdiEmailCheckOutline);
   } catch (e) {
-    compose.error = e instanceof Error ? e.message : String(e);
+    compose.error = errorText(e);
   } finally {
     compose.sending = false;
   }

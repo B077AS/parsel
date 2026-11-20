@@ -16,7 +16,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>25</maven.compiler.release>
     <!-- Released on Maven Central. For unreleased Jolt changes: mvn install -DskipTests in the Jolt repo and use 0.1.0-SNAPSHOT. -->
-    <jolt.version>0.4.1</jolt.version>
+    <jolt.version>0.5.0</jolt.version>
     <!-- Install and updates (see "Install, updates and the launcher" in CLAUDE.md). Keep the plugin (it bundles the stub) and
          jpack-api on the same release, and launcher/pom.xml's jpack.api.version too: notifyShown needs a stub from 0.1.3 on.
          Do not add a property called jpack.version: it is the jpack plugin's own version parameter and would replace the release version. -->

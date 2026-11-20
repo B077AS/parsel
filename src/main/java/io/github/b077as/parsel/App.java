@@ -1,8 +1,10 @@
 package io.github.b077as.parsel;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import io.github.b077as.parsel.account.AccountService;
 import io.github.b077as.parsel.account.AutoConfig;
+import io.github.b077as.parsel.account.UserFacingException;
 import io.github.b077as.parsel.attach.AttachmentService;
 import io.github.b077as.parsel.credentials.CredentialBroker;
 import io.github.b077as.parsel.mail.FakeMailService;
@@ -24,6 +26,8 @@ import io.github.b077as.jolt.Application;
 import io.github.b077as.jolt.ColorScheme;
 import io.github.b077as.jolt.FileDialogOptions;
 import io.github.b077as.jolt.ResourceOptions;
+import io.github.b077as.jolt.Rpc;
+import io.github.b077as.jolt.RpcException;
 import io.github.b077as.jolt.WebWindow;
 import io.github.b077as.jolt.WindowOptions;
 
@@ -104,20 +108,20 @@ public final class App {
                 showAnywayLater(app, window);
                 window.addInitScript(bootScript(saved, app, demo));
 
-                Rpc rpc = new Rpc(window);
+                Rpc rpc = rpcFor(window, dev);
                 TrayController tray = new TrayController(app, window, settings, readIcon(),
                         demo ? null : () -> syncToClose[0].syncAllAsync(), !demo, rpc::emit);
                 tray.start(saved.closeToTray());
-                rpc.on("settings.setCloseToTray", params -> {
-                    tray.setEnabled(params.get("enabled").getAsBoolean());
-                    return Map.of("ok", true);
+                rpc.on("settings.setCloseToTray", Enabled.class, p -> {
+                    tray.setEnabled(p.enabled());
+                    return Handlers.OK;
                 });
                 registerWindowRpc(app, window, rpc, settings, tray);
 
-                rpc.on("settings.setRefreshMinutes", params -> {
-                    int minutes = params.get("minutes").getAsInt();
+                rpc.on("settings.setRefreshMinutes", Minutes.class, p -> {
+                    int minutes = p.minutes();
                     if (!SettingsStore.REFRESH_CHOICES.contains(minutes)) {
-                        throw new IllegalArgumentException("unknown refresh interval: " + minutes);
+                        throw RpcException.badParams("unknown refresh interval: " + minutes);
                     }
                     settings.save(settings.get().withRefreshMinutes(minutes));
                     if (syncToClose[0] != null) {
@@ -125,8 +129,8 @@ public final class App {
                     }
                     return Map.of("ok", true);
                 });
-                rpc.on("settings.setNotifyNewMail", params -> {
-                    settings.save(settings.get().withNotifyNewMail(params.get("enabled").getAsBoolean()));
+                rpc.on("settings.setNotifyNewMail", Enabled.class, p -> {
+                    settings.save(settings.get().withNotifyNewMail(p.enabled()));
                     return Map.of("ok", true);
                 });
 
@@ -184,7 +188,7 @@ public final class App {
                             .withVisible(false), now));
                     showAnywayLater(app, popout);
                     popout.addInitScript(bootScript(now, app, demo));
-                    Rpc popoutRpc = new Rpc(popout);
+                    Rpc popoutRpc = rpcFor(popout, dev);
                     registerWindowRpc(app, popout, popoutRpc, settings, tray);
                     mailWiring.accept(popoutRpc, popout);
                     window.onClosed(popout::close); // the app is going away: so are the messages open in their own windows
@@ -260,60 +264,81 @@ public final class App {
                 "demo", demo)) + ";";
     }
 
+    /** The RPC of one window: answers its page's calls and pushes events to it. Every window gets its own, so an event goes to that window only. */
+    private static Rpc rpcFor(WebWindow window, boolean dev) {
+        return ParselRpc.create(dev).attach(window);
+    }
+
+    // What the page sends with the calls below; Jolt reads the JSON into these before the handler runs.
+    private record Enabled(boolean enabled) {}
+    private record Minutes(int minutes) {}
+    private record Density(String density) {
+        Density { Handlers.required(density, "density"); }
+    }
+    private record Width(int width) {}
+    private record Link(String url) {
+        Link { Handlers.required(url, "url"); }
+    }
+    private record Token(String token) {
+        Token { Handlers.required(token, "token"); }
+    }
+    private record Draft(JsonObject draft) {
+        Draft { Handlers.required(draft, "draft"); }
+    }
+    private record TokenDraft(String token, JsonObject draft) {
+        TokenDraft {
+            Handlers.required(token, "token");
+            Handlers.required(draft, "draft");
+        }
+    }
+
     /** What every window's page can ask of Java besides mail: info, theme, clipboard paste, opening links, closing itself. */
     private static void registerWindowRpc(Application app, WebWindow window, Rpc rpc, SettingsStore settings, TrayController tray) {
-        rpc.on("app.info", params -> Map.of(
+        rpc.on("app.info", call -> Map.of(
                 "os", System.getProperty("os.name"),
                 "java", System.getProperty("java.version")));
         registerTheme(app, rpc, window, settings, tray);
         // A message being written moves to a window of its own through here (see DraftStash).
-        rpc.on("compose.stash", params -> {
-            if (!params.has("draft") || !params.get("draft").isJsonObject()) {
-                throw new IllegalArgumentException("Missing draft");
-            }
-            return Map.of("token", DRAFTS.put(params.getAsJsonObject("draft")));
-        });
+        rpc.on("compose.stash", Draft.class, p -> Map.of("token", DRAFTS.put(p.draft())));
         // The new window reads the message (it stays here), keeps this copy current while the user types, and drops it when the
         // message is sent or thrown away. Closing the window any other way hands it back to the main window (see the opener).
-        rpc.on("compose.peek", params -> DRAFTS.peek(Params.string(params, "token")));
-        rpc.on("compose.update", params -> {
-            DRAFTS.update(Params.string(params, "token"), params.getAsJsonObject("draft"));
-            return Map.of("ok", true);
+        rpc.on("compose.peek", Token.class, p -> DRAFTS.peek(p.token()));
+        rpc.on("compose.update", TokenDraft.class, p -> {
+            DRAFTS.update(p.token(), p.draft());
+            return Handlers.OK;
         });
-        rpc.on("compose.discard", params -> {
-            DRAFTS.discard(Params.string(params, "token"));
-            return Map.of("ok", true);
+        rpc.on("compose.discard", Token.class, p -> {
+            DRAFTS.discard(p.token());
+            return Handlers.OK;
         });
-        rpc.on("compose.take", params -> DRAFTS.take(Params.string(params, "token")));
+        rpc.on("compose.take", Token.class, p -> DRAFTS.take(p.token()));
         // Used by a message in its own window once it has been archived, deleted or moved away.
-        rpc.on("window.close", params -> {
+        rpc.on("window.close", call -> {
             app.dispatch(window::close);
-            return Map.of("ok", true);
+            return Handlers.OK;
         });
         // The Paste item of the page's context menu (read with Jolt's clipboard API, plain text).
-        rpc.on("clipboard.readText", params -> {
+        rpc.on("clipboard.readText", call -> {
             try {
                 return Map.of("text", app.clipboard().readText().get().orElse(""));
             } catch (java.util.concurrent.ExecutionException e) {
-                throw new IllegalStateException("The clipboard could not be read. Use Ctrl+V to paste.", e.getCause());
+                throw new UserFacingException("The clipboard could not be read. Use Ctrl+V to paste.", e.getCause());
             }
         });
         // A link clicked in a message. Jolt only opens http, https and mailto, so a mail cannot start a program with a file: or custom link.
-        rpc.on("app.openExternal", params -> {
-            URI uri;
+        rpc.on("app.openExternal", Link.class, p -> {
             try {
-                uri = new URI(Params.string(params, "url"));
-                if (!app.openExternal(uri).get()) {
-                    throw new IllegalStateException("The system could not open this link.");
+                if (!app.openExternal(new URI(p.url())).get()) {
+                    throw new UserFacingException("The system could not open this link.");
                 }
             } catch (URISyntaxException e) {
-                throw new IllegalArgumentException("This is not a link that can be opened.");
+                throw new UserFacingException("This is not a link that can be opened.", e);
             } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException("Only web and email links can be opened.");
+                throw new UserFacingException("Only web and email links can be opened.", e);
             } catch (InterruptedException | ExecutionException e) {
-                throw new IllegalStateException("The system could not open this link.");
+                throw new UserFacingException("The system could not open this link.", e);
             }
-            return Map.of("ok", true);
+            return Handlers.OK;
         });
     }
 
@@ -361,9 +386,9 @@ public final class App {
             return future.get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while waiting for the file dialog", e);
+            throw new UserFacingException("Interrupted while waiting for the file dialog", e);
         } catch (ExecutionException e) {
-            throw new IllegalStateException("The file dialog failed: " + e.getCause().getMessage(), e.getCause());
+            throw new UserFacingException("The file dialog failed: " + e.getCause().getMessage(), e.getCause());
         }
     }
 
@@ -371,13 +396,13 @@ public final class App {
         int[][] lastIconColours = {null};
         rpc
                 // The page has its content on screen: now the window can appear (maximized) without a blank flash.
-                .on("window.ready", params -> {
+                .on("window.ready", call -> {
                     OnScreen.show(app, window); // the launcher closes once it hears this
-                    return Map.of("ok", true);
+                    return Handlers.OK;
                 })
                 // The page cannot restyle the operating system's title bar, but it can ask Java to.
-                .on("window.setTheme", params -> {
-                    ThemeRequest theme = ThemeRequest.parse(params);
+                .on("window.setTheme", ThemeRequest.Wire.class, wire -> {
+                    ThemeRequest theme = ThemeRequest.parse(wire);
                     window.setTitleBarScheme(theme.scheme());
                     window.setTitleBarColors(theme.background(), theme.text());
                     window.setBackgroundColor(theme.background());
@@ -392,23 +417,22 @@ public final class App {
                     }
                     settings.save(settings.get().withTheme(theme.preference(), theme.accent(),
                             theme.scheme().name().toLowerCase(java.util.Locale.ROOT), theme.background(), theme.text()));
-                    return Map.of("ok", true);
+                    return Handlers.OK;
                 })
-                .on("settings.setDensity", params -> {
-                    String density = ThemeRequest.string(params, "density");
-                    if (!SettingsStore.DENSITIES.contains(density)) {
-                        throw new IllegalArgumentException("unknown density: " + density);
+                .on("settings.setDensity", Density.class, p -> {
+                    if (!SettingsStore.DENSITIES.contains(p.density())) {
+                        throw RpcException.badParams("unknown density: " + p.density());
                     }
-                    settings.save(settings.get().withDensity(density));
-                    return Map.of("ok", true);
+                    settings.save(settings.get().withDensity(p.density()));
+                    return Handlers.OK;
                 })
-                .on("settings.setListWidth", params -> {
-                    int width = params.get("width").getAsInt();
+                .on("settings.setListWidth", Width.class, p -> {
+                    int width = p.width();
                     if (width < SettingsStore.LIST_WIDTH_MIN || width > SettingsStore.LIST_WIDTH_MAX) {
-                        throw new IllegalArgumentException("list width out of range: " + width);
+                        throw RpcException.badParams("list width out of range: " + width);
                     }
                     settings.save(settings.get().withListWidth(width));
-                    return Map.of("ok", true);
+                    return Handlers.OK;
                 });
     }
 

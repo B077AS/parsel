@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { errorText } from '../jolt';
 import { mdiAccountOutline, mdiArrowLeft, mdiCogOutline, mdiMonitorDashboard, mdiPaletteOutline, mdiPlus, mdiWeatherNight, mdiWhiteBalanceSunny } from '@mdi/js';
 import { ToggleGroupItem, ToggleGroupRoot } from 'reka-ui';
 import { ref } from 'vue';
@@ -19,7 +20,7 @@ async function remove(id: string): Promise<void> {
     await removeAccount(id);
     confirming.value = null;
   } catch (e) {
-    removeError.value = e instanceof Error ? e.message : String(e);
+    removeError.value = errorText(e);
   }
 }
 

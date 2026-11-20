@@ -1,4 +1,5 @@
 import { reactive } from 'vue';
+import { errorText } from './jolt';
 import { api, type Folder } from './api';
 import { ALL, mail, moveMessageTo } from './mail';
 import { demo, showToast } from './ui';
@@ -30,7 +31,7 @@ async function loadFolders(): Promise<void> {
     folderDialog.folders = (await api.folders(folderDialog.account)).filter((f) => f.id !== 'starred');
   } catch (e) {
     folderDialog.open = false;
-    showToast('Could not list the folders', e instanceof Error ? e.message : String(e), true);
+    showToast('Could not list the folders', errorText(e), true);
   } finally {
     folderDialog.loading = false;
   }

@@ -1,6 +1,6 @@
 package io.github.b077as.parsel.attach;
 
-import io.github.b077as.parsel.account.AccountException;
+import io.github.b077as.parsel.account.UserFacingException;
 import io.github.b077as.parsel.account.AccountService;
 import io.github.b077as.parsel.account.AccountSettings;
 import io.github.b077as.parsel.account.Problems;
@@ -80,7 +80,7 @@ public final class AttachmentService {
     public Saved download(String messageId, int index) {
         long id = parseId(messageId);
         MailStore.MessageRef ref = store.messageRef(id).orElseThrow(() -> new IllegalArgumentException("No such message"));
-        Mail.Detail detail = store.detail(id).orElseThrow(() -> new IllegalStateException("Open the message first"));
+        Mail.Detail detail = store.detail(id).orElseThrow(() -> new UserFacingException("Open the message first"));
         if (index < 0 || index >= detail.attachments().size()) {
             throw new IllegalArgumentException("No such attachment");
         }
@@ -89,14 +89,14 @@ public final class AttachmentService {
         if (target.isEmpty()) {
             return new Saved(false, name);
         }
-        var account = store.accountRow(ref.accountId()).orElseThrow(() -> new IllegalStateException("The account of this message was removed"));
+        var account = store.accountRow(ref.accountId()).orElseThrow(() -> new UserFacingException("The account of this message was removed"));
         AccountSettings settings = account.settings();
         String password = credentials.get(AccountService.key(settings.email()))
-                .orElseThrow(() -> new AccountException("There is no saved password for this account. Remove it and add it again."));
+                .orElseThrow(() -> new UserFacingException("There is no saved password for this account. Remove it and add it again."));
         try (ImapClient client = connector.connect(settings, password)) {
             client.saveAttachment(ref.folderPath(), ref.uid(), index, target.get());
         } catch (MessagingException | IOException e) {
-            throw new AccountException("Could not download " + name + ": " + Problems.explain(e, settings.imapHost(), settings.imapPort()), e);
+            throw new UserFacingException("Could not download " + name + ": " + Problems.explain(e, settings.imapHost(), settings.imapPort()), e);
         }
         return new Saved(true, target.get().getFileName().toString());
     }
@@ -116,14 +116,14 @@ public final class AttachmentService {
             long bytes;
             try {
                 if (!Files.isRegularFile(path)) {
-                    throw new AccountException(path.getFileName() + " is not a file.");
+                    throw new UserFacingException(path.getFileName() + " is not a file.");
                 }
                 bytes = Files.size(path);
             } catch (IOException e) {
-                throw new AccountException("Could not read " + path.getFileName() + ".", e);
+                throw new UserFacingException("Could not read " + path.getFileName() + ".", e);
             }
             if (bytes > MAX_TOTAL_BYTES) {
-                throw new AccountException(path.getFileName() + " is " + size(bytes) + ". Mail servers accept about " + size(MAX_TOTAL_BYTES) + " at most.");
+                throw new UserFacingException(path.getFileName() + " is " + size(bytes) + ". Mail servers accept about " + size(MAX_TOTAL_BYTES) + " at most.");
             }
             String id = UUID.randomUUID().toString();
             picked.put(id, path);
@@ -139,18 +139,18 @@ public final class AttachmentService {
         for (String id : ids) {
             Path path = picked.get(id);
             if (path == null) {
-                throw new IllegalArgumentException("An attached file is no longer available. Remove it and attach it again.");
+                throw new UserFacingException("An attached file is no longer available. Remove it and attach it again.");
             }
             try {
                 byte[] data = Files.readAllBytes(path);
                 total += data.length;
                 if (total > MAX_TOTAL_BYTES) {
-                    throw new AccountException("The attachments are larger than " + size(MAX_TOTAL_BYTES) + " together. Mail servers refuse that much.");
+                    throw new UserFacingException("The attachments are larger than " + size(MAX_TOTAL_BYTES) + " together. Mail servers refuse that much.");
                 }
                 String type = Files.probeContentType(path);
                 result.add(new Attached(path.getFileName().toString(), type == null ? "application/octet-stream" : type, data));
             } catch (IOException e) {
-                throw new AccountException("Could not read " + path.getFileName() + ". Has it been moved or deleted?", e);
+                throw new UserFacingException("Could not read " + path.getFileName() + ". Has it been moved or deleted?", e);
             }
         }
         return result;

@@ -99,7 +99,7 @@ class AccountServiceTest {
 
     @Test
     void aWrongPasswordAddsNothing() {
-        AccountException e = assertThrows(AccountException.class, () -> accounts.add(settings, "wrong"));
+        UserFacingException e = assertThrows(UserFacingException.class, () -> accounts.add(settings, "wrong"));
         assertTrue(e.getMessage().contains("refused the login"));
         assertTrue(store.accounts().isEmpty());
         assertTrue(secrets.map.isEmpty());
@@ -108,7 +108,7 @@ class AccountServiceTest {
     @Test
     void theSameAccountCannotBeAddedTwiceAndTheFirstPasswordSurvives() {
         accounts.add(settings, "secret");
-        AccountException e = assertThrows(AccountException.class, () -> accounts.add(settings, "secret"));
+        UserFacingException e = assertThrows(UserFacingException.class, () -> accounts.add(settings, "secret"));
         assertTrue(e.getMessage().contains("already been added"), e.getMessage());
         assertEquals(1, store.accounts().size());
     }
@@ -116,7 +116,7 @@ class AccountServiceTest {
     @Test
     void unencryptedServersAreRefusedUnlessTheyAreLocalhost() {
         AccountSettings remote = new AccountSettings("x", "a@example.com", "a", "imap.example.com", 143, Security.NONE, "smtp.example.com", 25, Security.SSL);
-        AccountException e = assertThrows(AccountException.class, () -> accounts.add(remote, "pw"));
+        UserFacingException e = assertThrows(UserFacingException.class, () -> accounts.add(remote, "pw"));
         assertTrue(e.getMessage().contains("SSL/TLS or STARTTLS"), e.getMessage());
         assertThrows(IllegalArgumentException.class, () -> accounts.test(remote, "pw"));
     }

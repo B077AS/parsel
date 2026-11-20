@@ -14,7 +14,7 @@ import Toast from './components/Toast.vue';
 import Toolbar from './components/Toolbar.vue';
 import VaultGate from './components/VaultGate.vue';
 import { compose, currentDraft, openCompose, restoreDraft, returnDraft } from './compose';
-import { onEvent } from './jolt';
+import { onEvent, errorText } from './jolt';
 import { initMail, initPopout, mail, moveState, openMessage } from './mail';
 import { tray } from './theme';
 import { composeToken, demo, popout, showToast, ui } from './ui';
@@ -69,7 +69,7 @@ onMounted(async () => {
       restoreDraft(await api.peekDraft(composeToken));
       startKeepingDraft(composeToken);
     } catch (e) {
-      showToast('Could not open this message', e instanceof Error ? e.message : String(e), true);
+      showToast('Could not open this message', errorText(e), true);
     }
     mail.loaded = true;
     await nextTick();

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { errorText } from '../jolt';
 import {
   mdiArchiveOutline,
   mdiDeleteOutline,
@@ -58,7 +59,7 @@ async function save(index: number): Promise<void> {
     const result = await api.saveAttachment(id, index);
     if (result.saved) showToast('Attachment saved', result.name);
   } catch (e) {
-    showToast('Could not save the attachment', e instanceof Error ? e.message : String(e), true);
+    showToast('Could not save the attachment', errorText(e), true);
   } finally {
     saving.value = null;
   }

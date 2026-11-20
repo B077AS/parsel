@@ -1,5 +1,6 @@
 package io.github.b077as.parsel;
 
+import io.github.b077as.parsel.account.UserFacingException;
 import io.github.b077as.parsel.settings.SettingsStore;
 import io.github.b077as.jolt.Application;
 import io.github.b077as.jolt.CloseBehavior;
@@ -57,7 +58,7 @@ final class TrayController {
         }
     }
 
-    /** Turns the option on or off and remembers it. Safe from any thread; throws if the desktop cannot show a tray icon. */
+    /** Turns the option on or off and remembers it. Safe from any thread; throws a UserFacingException if the desktop cannot show a tray icon. */
     void setEnabled(boolean on) {
         try {
             app.submit(() -> {
@@ -91,7 +92,7 @@ final class TrayController {
     private void apply(boolean on) {
         if (on) {
             if (!isSupported()) {
-                throw new IllegalStateException("This desktop does not show tray icons. On GNOME, the AppIndicator extension adds them.");
+                throw new UserFacingException("This desktop does not show tray icons. On GNOME, the AppIndicator extension adds them.");
             }
             if (tray == null) {
                 tray = app.createTray(icon, "Parsel");

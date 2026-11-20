@@ -3,6 +3,7 @@ package io.github.b077as.parsel.sync;
 import io.github.b077as.parsel.account.AccountService;
 import io.github.b077as.parsel.account.AccountSettings;
 import io.github.b077as.parsel.account.Problems;
+import io.github.b077as.parsel.account.UserFacingException;
 import io.github.b077as.parsel.credentials.CredentialBroker;
 import io.github.b077as.parsel.imap.BodyParser;
 import io.github.b077as.parsel.imap.ImapClient;
@@ -289,14 +290,14 @@ public final class SyncService implements AutoCloseable {
         if (ref.bodyCached()) {
             return;
         }
-        AccountRow account = store.accountRow(ref.accountId()).orElseThrow(() -> new IllegalStateException("The account of this message was removed"));
+        AccountRow account = store.accountRow(ref.accountId()).orElseThrow(() -> new UserFacingException("The account of this message was removed"));
         String password = credentials.get(AccountService.key(account.settings().email()))
-                .orElseThrow(() -> new IllegalStateException("There is no saved password for this account"));
+                .orElseThrow(() -> new UserFacingException("There is no saved password for this account"));
         try (ImapClient client = connector.connect(account.settings(), password)) {
             BodyParser.Parsed parsed = client.fetchBody(ref.folderPath(), ref.uid());
             store.setBody(messageId, parsed.html(), parsed.snippet(), parsed.hasRemoteImages(), parsed.attachments());
         } catch (MessagingException | IOException e) {
-            throw new IllegalStateException(Problems.explain(e, account.settings().imapHost(), account.settings().imapPort()), e);
+            throw new UserFacingException(Problems.explain(e, account.settings().imapHost(), account.settings().imapPort()), e);
         }
     }
 
@@ -353,19 +354,19 @@ public final class SyncService implements AutoCloseable {
      * Marks a message important or not: the cache changes at once, then the server is asked and this waits for it. If the server
      * refuses (some do not accept custom flags) the cache is put back and the reason is thrown, so the mark never flips back by itself later.
      *
-     * @throws IllegalStateException with a sentence for the user
+     * @throws UserFacingException with a sentence for the user
      */
     public void setImportant(long messageId, boolean important) {
         MailStore.MessageRef ref = store.messageRef(messageId).orElseThrow(() -> new IllegalArgumentException("No such message"));
-        AccountRow account = store.accountRow(ref.accountId()).orElseThrow(() -> new IllegalStateException("The account of this message was removed"));
+        AccountRow account = store.accountRow(ref.accountId()).orElseThrow(() -> new UserFacingException("The account of this message was removed"));
         String password = credentials.get(AccountService.key(account.settings().email()))
-                .orElseThrow(() -> new IllegalStateException("There is no saved password for this account"));
+                .orElseThrow(() -> new UserFacingException("There is no saved password for this account"));
         store.setImportant(messageId, important);
         try (ImapClient client = connector.connect(account.settings(), password)) {
             client.setImportant(ref.folderPath(), ref.uid(), important);
         } catch (MessagingException e) {
             store.setImportant(messageId, !important);
-            throw new IllegalStateException(Problems.explain(e, account.settings().imapHost(), account.settings().imapPort()), e);
+            throw new UserFacingException(Problems.explain(e, account.settings().imapHost(), account.settings().imapPort()), e);
         }
     }
 
@@ -375,7 +376,7 @@ public final class SyncService implements AutoCloseable {
      *
      * If the account has no archive folder, an {@value #ARCHIVE_FOLDER} folder is created on the server first.
      *
-     * @throws IllegalStateException with a sentence for the user if the server refuses
+     * @throws UserFacingException with a sentence for the user if the server refuses
      */
     public void archive(long messageId) {
         moveToRole(messageId, "archive", ARCHIVE_FOLDER, "archive");
@@ -399,7 +400,7 @@ public final class SyncService implements AutoCloseable {
      *
      * @param folderId a standard folder's id ("inbox", "archive", ...) or the id of one of the account's own folders ("f12")
      * @throws IllegalArgumentException if the folder is not one of this account's
-     * @throws IllegalStateException    with a sentence for the user if the server refuses
+     * @throws UserFacingException    with a sentence for the user if the server refuses
      */
     public void moveToFolder(long messageId, String folderId) {
         moveAll(List.of(messageId), "move the message", accountId -> new Destination(folderRow(accountId, folderId).path(), false));
@@ -410,24 +411,24 @@ public final class SyncService implements AutoCloseable {
      *
      * @param parentFolderId the folder to create it in (an id as for {@link #moveToFolder}), or null for the top level
      * @return the new folder, as the sidebar shows it
-     * @throws IllegalArgumentException with a sentence for the user if the name is not usable or the folder exists
-     * @throws IllegalStateException    with a sentence for the user if the server refuses
+     * @throws UserFacingException with a sentence for the user if the name is not usable or the folder exists
+     * @throws UserFacingException    with a sentence for the user if the server refuses
      */
     public Mail.Folder createFolder(long accountId, String parentFolderId, String name) {
         String clean = folderName(name);
-        AccountRow account = store.accountRow(accountId).orElseThrow(() -> new IllegalArgumentException("Choose an account first"));
+        AccountRow account = store.accountRow(accountId).orElseThrow(() -> new UserFacingException("Choose an account first"));
         String parentPath = parentFolderId == null || parentFolderId.isBlank() ? null : folderRow(accountId, parentFolderId).path();
         String password = credentials.get(AccountService.key(account.settings().email()))
-                .orElseThrow(() -> new IllegalStateException("There is no saved password for this account"));
+                .orElseThrow(() -> new UserFacingException("There is no saved password for this account"));
         String path;
         try (ImapClient client = connector.connect(account.settings(), password)) {
             path = client.createFolder(parentPath, clean);
             storeRemoteFolders(account, client);
         } catch (MessagingException e) {
-            throw new IllegalStateException("Could not create the folder: " + Problems.explain(e, account.settings().imapHost(), account.settings().imapPort()), e);
+            throw new UserFacingException("Could not create the folder: " + Problems.explain(e, account.settings().imapHost(), account.settings().imapPort()), e);
         }
         FolderRow created = store.folderRows(accountId).stream().filter(f -> f.path().equals(path)).findFirst()
-                .orElseThrow(() -> new IllegalStateException("The folder was created but the server did not list it"));
+                .orElseThrow(() -> new UserFacingException("The folder was created but the server did not list it"));
         return store.folders(String.valueOf(accountId)).stream().filter(f -> f.id().equals("f" + created.id())).findFirst()
                 .orElse(new Mail.Folder("f" + created.id(), created.name(), 0));
     }
@@ -436,16 +437,16 @@ public final class SyncService implements AutoCloseable {
     static String folderName(String name) {
         String clean = name == null ? "" : name.strip();
         if (clean.isEmpty()) {
-            throw new IllegalArgumentException("Give the folder a name");
+            throw new UserFacingException("Give the folder a name");
         }
         if (clean.length() > 100) {
-            throw new IllegalArgumentException("A folder name can be at most 100 characters");
+            throw new UserFacingException("A folder name can be at most 100 characters");
         }
         if (clean.chars().anyMatch(c -> c < 32 || c == 127 || "/\\*%#".indexOf(c) >= 0)) {
-            throw new IllegalArgumentException("A folder name cannot contain / \\ * % # or control characters");
+            throw new UserFacingException("A folder name cannot contain / \\ * % # or control characters");
         }
         if (clean.equalsIgnoreCase("INBOX") || clean.equals(".") || clean.equals("..")) {
-            throw new IllegalArgumentException("\"" + clean + "\" cannot be used as a folder name");
+            throw new UserFacingException("\"" + clean + "\" cannot be used as a folder name");
         }
         return clean;
     }
@@ -510,14 +511,14 @@ public final class SyncService implements AutoCloseable {
             long accountId = entry.getKey();
             List<Item> items = entry.getValue();
             total += items.size();
-            AccountRow account = store.accountRow(accountId).orElseThrow(() -> new IllegalStateException("The account of this message was removed"));
+            AccountRow account = store.accountRow(accountId).orElseThrow(() -> new UserFacingException("The account of this message was removed"));
             Destination destination = destinationFor.apply(accountId);
             List<Item> todo = items.stream().filter(i -> !i.ref().folderPath().equals(destination.path())).toList();
             if (todo.isEmpty()) {
                 continue; // already there
             }
             String password = credentials.get(AccountService.key(account.settings().email()))
-                    .orElseThrow(() -> new IllegalStateException("There is no saved password for this account"));
+                    .orElseThrow(() -> new UserFacingException("There is no saved password for this account"));
             int moved = 0;
             int accountFailed = 0;
             boolean refreshed = false;
@@ -552,7 +553,7 @@ public final class SyncService implements AutoCloseable {
             }
         }
         if (failed > 0) {
-            throw new IllegalStateException("Could not " + verb + (total > 1 ? " " + failed + " of " + total + " messages" : "") + ": " + firstProblem);
+            throw new UserFacingException("Could not " + verb + (total > 1 ? " " + failed + " of " + total + " messages" : "") + ": " + firstProblem);
         }
     }
 

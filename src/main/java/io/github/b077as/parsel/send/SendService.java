@@ -1,6 +1,6 @@
 package io.github.b077as.parsel.send;
 
-import io.github.b077as.parsel.account.AccountException;
+import io.github.b077as.parsel.account.UserFacingException;
 import io.github.b077as.parsel.account.AccountService;
 import io.github.b077as.parsel.account.AccountSettings;
 import io.github.b077as.parsel.attach.AttachmentService;
@@ -86,14 +86,14 @@ public final class SendService {
     // ---- sending --------------------------------------------------------------------------------------------------
 
     /**
-     * @throws AccountException         if the server refuses the login or the message
+     * @throws UserFacingException         if the server refuses the login or the message
      * @throws IllegalArgumentException with a sentence for the user if an address is not valid or there is no recipient
      */
     public Result send(Draft draft) {
         AccountRow account = account(draft.account());
         AccountSettings settings = account.settings();
         String password = credentials.get(AccountService.key(settings.email()))
-                .orElseThrow(() -> new AccountException("There is no saved password for this account. Remove it and add it again."));
+                .orElseThrow(() -> new UserFacingException("There is no saved password for this account. Remove it and add it again."));
 
         String inReplyTo = null;
         String references = null;
@@ -121,7 +121,7 @@ public final class SendService {
         try {
             raw = MailSender.send(settings, password, outgoing);
         } catch (MessagingException e) {
-            throw new AccountException(Problems.explain(e, settings.smtpHost(), settings.smtpPort()), e);
+            throw new UserFacingException(Problems.explain(e, settings.smtpHost(), settings.smtpPort()), e);
         }
 
         if (attachments != null) {
@@ -171,8 +171,8 @@ public final class SendService {
     public Prefill prefill(String messageId, Mode mode, boolean live) {
         long id = parseId(messageId);
         MailStore.MessageRef ref = store.messageRef(id).orElseThrow(() -> new IllegalArgumentException("No such message"));
-        Mail.Detail detail = store.detail(id).orElseThrow(() -> new IllegalStateException("Open the message first"));
-        AccountRow account = store.accountRow(ref.accountId()).orElseThrow(() -> new IllegalStateException("The account of this message was removed"));
+        Mail.Detail detail = store.detail(id).orElseThrow(() -> new UserFacingException("Open the message first"));
+        AccountRow account = store.accountRow(ref.accountId()).orElseThrow(() -> new UserFacingException("The account of this message was removed"));
         Mail.Summary original = detail.summary();
 
         String password = live ? credentials.get(AccountService.key(account.settings().email())).orElse(null) : null;
@@ -245,7 +245,7 @@ public final class SendService {
     // ---- plumbing -------------------------------------------------------------------------------------------------
 
     private AccountRow account(String accountId) {
-        return store.accountRow(parseId(accountId)).orElseThrow(() -> new IllegalArgumentException("Choose an account to send from"));
+        return store.accountRow(parseId(accountId)).orElseThrow(() -> new UserFacingException("Choose an account to send from"));
     }
 
     private static long parseId(String id) {

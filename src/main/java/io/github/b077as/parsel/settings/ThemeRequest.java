@@ -1,8 +1,7 @@
 package io.github.b077as.parsel.settings;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import io.github.b077as.jolt.ColorScheme;
+import io.github.b077as.jolt.RpcException;
 
 import java.util.regex.Pattern;
 
@@ -16,36 +15,39 @@ public record ThemeRequest(String preference, String accent, ColorScheme scheme,
 
     private static final Pattern HEX_COLOR = Pattern.compile("#[0-9a-fA-F]{6}");
 
-    public static ThemeRequest parse(JsonObject params) {
-        String preference = string(params, "preference");
+    /** The request as the page sends it ({@code window.setTheme}); {@link #parse} checks it. */
+    public record Wire(String preference, String accent, String scheme, String background, String text, String accentColor, String onAccent) {}
+
+    /** @throws RpcException {@code bad_params} for a value the window must not be given */
+    public static ThemeRequest parse(Wire wire) {
+        String preference = text(wire.preference(), "preference");
         if (!SettingsStore.PREFERENCES.contains(preference)) {
-            throw new IllegalArgumentException("preference must be system, light or dark: " + preference);
+            throw RpcException.badParams("preference must be system, light or dark: " + preference);
         }
-        String accent = string(params, "accent");
+        String accent = text(wire.accent(), "accent");
         if (!SettingsStore.ACCENTS.contains(accent)) {
-            throw new IllegalArgumentException("unknown accent: " + accent);
+            throw RpcException.badParams("unknown accent: " + accent);
         }
-        ColorScheme scheme = switch (string(params, "scheme")) {
+        ColorScheme scheme = switch (text(wire.scheme(), "scheme")) {
             case "light" -> ColorScheme.LIGHT;
             case "dark" -> ColorScheme.DARK;
-            default -> throw new IllegalArgumentException("scheme must be light or dark");
+            default -> throw RpcException.badParams("scheme must be light or dark");
         };
-        return new ThemeRequest(preference, accent, scheme, color(params, "background"), color(params, "text"),
-                color(params, "accentColor"), color(params, "onAccent"));
+        return new ThemeRequest(preference, accent, scheme, color(wire.background(), "background"), color(wire.text(), "text"),
+                color(wire.accentColor(), "accentColor"), color(wire.onAccent(), "onAccent"));
     }
 
-    public static String string(JsonObject params, String key) {
-        JsonElement value = params.get(key);
-        if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) {
-            throw new IllegalArgumentException(key + " is required and must be text");
+    private static String text(String value, String key) {
+        if (value == null) {
+            throw RpcException.badParams(key + " is required and must be text");
         }
-        return value.getAsString();
+        return value;
     }
 
-    private static int color(JsonObject params, String key) {
-        String hex = string(params, key);
+    private static int color(String value, String key) {
+        String hex = text(value, key);
         if (!HEX_COLOR.matcher(hex).matches()) {
-            throw new IllegalArgumentException(key + " must look like #1a2b3c: " + hex);
+            throw RpcException.badParams(key + " must look like #1a2b3c: " + hex);
         }
         return Integer.parseInt(hex.substring(1), 16);
     }

@@ -3,7 +3,7 @@ package io.github.b077as.parsel.attach;
 import com.icegreen.greenmail.junit5.GreenMailExtension;
 import com.icegreen.greenmail.user.GreenMailUser;
 import com.icegreen.greenmail.util.ServerSetupTest;
-import io.github.b077as.parsel.account.AccountException;
+import io.github.b077as.parsel.account.UserFacingException;
 import io.github.b077as.parsel.account.AccountSettings;
 import io.github.b077as.parsel.account.Security;
 import io.github.b077as.parsel.credentials.CredentialBroker;
@@ -220,13 +220,13 @@ class AttachmentServiceTest {
         }
         chooser.openThese = List.of(big);
 
-        AccountException e = assertThrows(AccountException.class, () -> attachments.pick());
+        UserFacingException e = assertThrows(UserFacingException.class, () -> attachments.pick());
         assertTrue(e.getMessage().contains("big.iso"), e.getMessage());
     }
 
     @Test
     void anUnknownOrDeletedFileIsReportedNotSentAsNothing() throws Exception {
-        assertThrows(IllegalArgumentException.class, () -> attachments.load(List.of("not-an-id")));
+        assertThrows(UserFacingException.class, () -> attachments.load(List.of("not-an-id")));
 
         Path gone = dir.resolve("gone.txt");
         Files.writeString(gone, "x");
@@ -234,6 +234,6 @@ class AttachmentServiceTest {
         String id = attachments.pick().get(0).id();
         Files.delete(gone);
 
-        assertThrows(AccountException.class, () -> attachments.load(List.of(id)));
+        assertThrows(UserFacingException.class, () -> attachments.load(List.of(id)));
     }
 }

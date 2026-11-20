@@ -1,4 +1,5 @@
 import { reactive } from 'vue';
+import { errorText } from './jolt';
 import { api, type VaultStatus } from './api';
 
 // Where passwords live. Normally the operating system's keystore, which needs nothing from the user. On a machine
@@ -24,7 +25,7 @@ export async function refreshVault(): Promise<void> {
   try {
     apply(await api.vaultStatus());
   } catch (e) {
-    vault.error = e instanceof Error ? e.message : String(e);
+    vault.error = errorText(e);
   } finally {
     vault.loaded = true;
   }
@@ -38,7 +39,7 @@ export async function submitVaultPassword(password: string): Promise<boolean> {
     apply(vault.state === 'new' ? await api.createVault(password) : await api.unlockVault(password));
     return true;
   } catch (e) {
-    vault.error = e instanceof Error ? e.message : String(e);
+    vault.error = errorText(e);
     return false;
   } finally {
     vault.busy = false;

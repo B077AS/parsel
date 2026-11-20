@@ -71,7 +71,7 @@ final class LauncherApp implements UpdateManager.Listener {
         WindowOptions options = WindowOptions.defaults()
                 .withTitle("Parsel")
                 .withSize(WIDTH, HEIGHT)
-                .withMinSize(WIDTH, HEIGHT)
+                .withResizable(false) // a fixed-size window: no invisible resize edges (Jolt 0.4.2)
                 .withFrameless(true)
                 .withCentered(true)
                 .withVisible(false)

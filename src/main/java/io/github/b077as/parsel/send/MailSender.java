@@ -2,6 +2,7 @@ package io.github.b077as.parsel.send;
 
 import io.github.b077as.parsel.account.AccountSettings;
 import io.github.b077as.parsel.account.Security;
+import io.github.b077as.parsel.account.UserFacingException;
 import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
 import jakarta.activation.DataHandler;
@@ -129,7 +130,7 @@ public final class MailSender {
         List<InternetAddress> cc = addresses(o.cc(), "Cc");
         List<InternetAddress> bcc = addresses(o.bcc(), "Bcc");
         if (to.isEmpty() && cc.isEmpty() && bcc.isEmpty()) {
-            throw new IllegalArgumentException("Add at least one recipient");
+            throw new UserFacingException("Add at least one recipient");
         }
         message.setRecipients(Message.RecipientType.TO, to.toArray(new InternetAddress[0]));
         message.setRecipients(Message.RecipientType.CC, cc.toArray(new InternetAddress[0]));
@@ -224,7 +225,7 @@ public final class MailSender {
                 parsed.validate();
                 result.add(parsed);
             } catch (AddressException e) {
-                throw new IllegalArgumentException("\"" + address + "\" in " + field + " is not a valid email address");
+                throw new UserFacingException("\"" + address + "\" in " + field + " is not a valid email address");
             }
         }
         return result;

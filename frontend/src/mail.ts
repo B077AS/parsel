@@ -1,6 +1,6 @@
 import { computed, reactive } from 'vue';
 import { api, type MoveAction, type Account, type Detail, type Folder, type Summary, type SyncStatus } from './api';
-import { onEvent } from './jolt';
+import { onEvent, errorText } from './jolt';
 import { openWindow } from './jolt';
 import { popout, showToast, ui } from './ui';
 
@@ -82,7 +82,7 @@ export const visibleMessages = computed(() => {
 });
 
 function message(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
+  return errorText(e);
 }
 
 let reloadCount = 0;

@@ -58,22 +58,22 @@ public final class AccountService {
      * Checks the login, then saves the password and the account. Needs a working incoming server; a failing outgoing
      * server does not stop it (reading mail still works), the caller sees that from {@link #test}.
      *
-     * @throws AccountException                         if the login failed, the account exists, or the settings are not valid
+     * @throws UserFacingException                         if the login failed, the account exists, or the settings are not valid
      * @throws CredentialBroker.VaultLockedException    if the password vault has to be unlocked first
      */
     public Mail.Account add(AccountSettings settings, String password) {
         try {
             settings.validate();
         } catch (IllegalArgumentException e) {
-            throw new AccountException(e.getMessage(), e);
+            throw new UserFacingException(e.getMessage(), e);
         }
         if (password == null || password.isEmpty()) {
-            throw new AccountException("The password is required");
+            throw new UserFacingException("The password is required");
         }
         try {
             ImapClient.connect(settings, password).close(); // logged in: the settings and the password are right
         } catch (Exception e) {
-            throw new AccountException(Problems.explain(e, settings.imapHost(), settings.imapPort()), e);
+            throw new UserFacingException(Problems.explain(e, settings.imapHost(), settings.imapPort()), e);
         }
         String key = key(settings.email());
         credentials.store(); // fails early with VaultLockedException, before anything is written
@@ -82,7 +82,7 @@ public final class AccountService {
             credentials.put(key, password);
             id = store.addAccount(settings);
         } catch (IllegalArgumentException e) {
-            throw new AccountException(e.getMessage(), e);
+            throw new UserFacingException(e.getMessage(), e);
         } catch (RuntimeException e) {
             safelyDelete(key);
             throw e;

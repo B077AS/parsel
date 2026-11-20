@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { errorText } from '../jolt';
 import { mdiChevronDown, mdiCheck, mdiFolderPlusOutline } from '@mdi/js';
 import {
   DialogContent,
@@ -107,7 +108,7 @@ async function create(): Promise<void> {
   try {
     await createFolderAndMove(name.value, parent.value);
   } catch (e) {
-    showToast('Could not create the folder', e instanceof Error ? e.message : String(e), true);
+    showToast('Could not create the folder', errorText(e), true);
   } finally {
     busy.value = false;
   }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { errorText } from '../jolt';
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { api } from '../api';
 import { scheme } from '../theme';
@@ -65,7 +66,7 @@ function openLink(event: Event): void {
   event.preventDefault();
   if (event.type === 'auxclick' && (event as MouseEvent).button !== 1) return;
   api.openExternal((link as HTMLAnchorElement).href).catch((e) => {
-    showToast('Could not open the link', e instanceof Error ? e.message : String(e), true);
+    showToast('Could not open the link', errorText(e), true);
   });
 }
 

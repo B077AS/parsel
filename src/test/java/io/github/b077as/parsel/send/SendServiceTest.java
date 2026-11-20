@@ -3,7 +3,7 @@ package io.github.b077as.parsel.send;
 import com.icegreen.greenmail.junit5.GreenMailExtension;
 import com.icegreen.greenmail.user.GreenMailUser;
 import com.icegreen.greenmail.util.ServerSetupTest;
-import io.github.b077as.parsel.account.AccountException;
+import io.github.b077as.parsel.account.UserFacingException;
 import io.github.b077as.parsel.account.AccountSettings;
 import io.github.b077as.parsel.account.Security;
 import io.github.b077as.parsel.credentials.CredentialBroker;
@@ -251,11 +251,11 @@ class SendServiceTest {
 
     @Test
     void badInputIsRefusedBeforeAnythingIsSent() {
-        var noOne = assertThrows(IllegalArgumentException.class,
+        var noOne = assertThrows(UserFacingException.class,
                 () -> sendDraft(draft(List.of(), List.of(), List.of(), "x", "y", null)));
         assertEquals("Add at least one recipient", noOne.getMessage());
 
-        var bad = assertThrows(IllegalArgumentException.class,
+        var bad = assertThrows(UserFacingException.class,
                 () -> sendDraft(draft(List.of("elena@example.com", "not an address"), List.of(), List.of(), "x", "y", null)));
         assertTrue(bad.getMessage().contains("not an address"));
 
@@ -279,7 +279,7 @@ class SendServiceTest {
         wrong.put("will@localhost", "not-the-password");
         SendService other = new SendService(store, CredentialBroker.withStore(wrong), ImapClient::connect, id -> {});
 
-        var error = assertThrows(AccountException.class,
+        var error = assertThrows(UserFacingException.class,
                 () -> other.send(new SendService.Draft(String.valueOf(accountId), List.of("elena@example.com"), List.of(), List.of(), "x", "y", null)));
         assertFalse(error.getMessage().isBlank());
         assertEquals(0, greenMail.getReceivedMessages().length);

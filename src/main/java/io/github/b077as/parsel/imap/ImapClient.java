@@ -2,6 +2,7 @@ package io.github.b077as.parsel.imap;
 
 import io.github.b077as.parsel.account.AccountSettings;
 import io.github.b077as.parsel.account.Security;
+import io.github.b077as.parsel.account.UserFacingException;
 import io.github.b077as.parsel.store.MailStore.HeaderRow;
 import jakarta.mail.FetchProfile;
 import jakarta.mail.Flags;
@@ -398,11 +399,11 @@ public final class ImapClient implements AutoCloseable {
         }
         char separator = parent.getSeparator();
         if (separator != 0 && name.indexOf(separator) >= 0) {
-            throw new IllegalArgumentException("A folder name cannot contain \"" + separator + "\" on this server");
+            throw new UserFacingException("A folder name cannot contain \"" + separator + "\" on this server");
         }
         Folder child = parent.getFolder(name);
         if (child.exists()) {
-            throw new IllegalArgumentException("There is already a folder called \"" + name + "\" there");
+            throw new UserFacingException("There is already a folder called \"" + name + "\" there");
         }
         if (!child.create(Folder.HOLDS_MESSAGES)) {
             throw new MessagingException("The server would not create the folder " + name);

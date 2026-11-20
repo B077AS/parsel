@@ -1,6 +1,7 @@
 package io.github.b077as.parsel;
 
 import com.google.gson.JsonObject;
+import io.github.b077as.parsel.account.UserFacingException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -68,14 +69,14 @@ final class DraftStash {
 
     private static JsonObject require(JsonObject draft) {
         if (draft == null) {
-            throw new IllegalStateException("This message is no longer available. Start it again in the main window.");
+            throw new UserFacingException("This message is no longer available. Start it again in the main window.");
         }
         return draft;
     }
 
     private static void checkSize(JsonObject draft) {
         if (draft.toString().length() > MAX_CHARS) {
-            throw new IllegalArgumentException("This message is too large to move to another window.");
+            throw new UserFacingException("This message is too large to move to another window.");
         }
     }
 }

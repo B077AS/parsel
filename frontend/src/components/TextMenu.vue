@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { errorText } from '../jolt';
 import { mdiContentCopy, mdiContentCut, mdiContentPaste, mdiSelectAll } from '@mdi/js';
 import { DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal, DropdownMenuRoot, DropdownMenuSeparator, DropdownMenuTrigger } from 'reka-ui';
 import { nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
@@ -82,7 +83,7 @@ async function run(action: 'cut' | 'copy' | 'paste' | 'selectAll'): Promise<void
       else document.execCommand('insertText', false, text);
     }
   } catch (e) {
-    showToast('Could not paste', e instanceof Error ? e.message : String(e), true);
+    showToast('Could not paste', errorText(e), true);
   }
 }
 

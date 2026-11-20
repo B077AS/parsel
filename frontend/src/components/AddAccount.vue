@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { errorText } from '../jolt';
 import { mdiLockOutline } from '@mdi/js';
 import { ToggleGroupItem, ToggleGroupRoot } from 'reka-ui';
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
@@ -95,7 +96,7 @@ const outgoing = computed(() => {
 });
 
 function message(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
+  return errorText(e);
 }
 
 async function submit(): Promise<void> {
